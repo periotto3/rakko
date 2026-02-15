@@ -4,6 +4,7 @@ import { useGame } from "@/hooks/useGame";
 import { allReady } from "@/lib/gameEngine";
 import Lobby from "@/components/Lobby";
 import GameTable from "@/components/GameTable";
+import RoundResultScreen from "@/components/RoundResultScreen";
 import ResultScreen from "@/components/ResultScreen";
 
 export default function GamePage() {
@@ -14,6 +15,7 @@ export default function GamePage() {
     handleStartGame,
     handleDiscard,
     handleSubmitArchitecture,
+    handleNextRound,
     handleReset,
   } = useGame();
 
@@ -61,6 +63,16 @@ export default function GamePage() {
           </p>
           <p className="text-slate-400 text-sm">LLMが構成を分析しています</p>
         </div>
+      );
+
+    case "roundResult":
+      return (
+        <RoundResultScreen
+          players={state.players}
+          round={state.round}
+          maxRounds={state.maxRounds}
+          onNextRound={handleNextRound}
+        />
       );
 
     case "result":

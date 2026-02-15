@@ -50,6 +50,7 @@ export type Player = {
   avatar: string;
   hasDiscarded: boolean;
   hasSubmitted: boolean;
+  totalScore: number;
 };
 
 // ============================================
@@ -62,6 +63,7 @@ export type GamePhase =
   | "drafting"
   | "building"
   | "evaluating"
+  | "roundResult"
   | "result";
 
 // ============================================

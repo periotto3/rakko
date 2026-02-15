@@ -2,8 +2,7 @@ import { GameState, Player, CPUPersonality } from "./types";
 import { createResourcePool, drawResources } from "./resources";
 import { decideCPUDiscard, decideCPUBuildSelection } from "./cpuStrategy";
 
-const MAX_ROUNDS = 3;
-const DRAW_PER_ROUND = 3;
+const HAND_SIZE = 7;
 
 const CPU_PLAYERS: { name: string; personality: CPUPersonality; avatar: string }[] = [
   { name: "Sakura", personality: "serverless-fan", avatar: "🌸" },
@@ -27,6 +26,7 @@ function createPlayer(
     avatar,
     hasDiscarded: false,
     hasSubmitted: false,
+    totalScore: 0,
   };
 }
 
@@ -38,7 +38,7 @@ export function createInitialState(): GameState {
     currentPlayerIndex: 0,
     phase: "idle",
     round: 0,
-    maxRounds: MAX_ROUNDS,
+    maxRounds: 1,
   };
 }
 
@@ -69,32 +69,30 @@ export function allReady(state: GameState): boolean {
 export function startGame(state: GameState): GameState {
   const pool = createResourcePool();
 
-  return dealDraftRound({
-    ...state,
-    resourcePool: pool,
-    discardPile: [],
-    phase: "drafting",
-    round: 1,
-    players: state.players.map((p) => ({
+  // 各プレイヤーに7枚配布
+  let remainingPool = [...pool];
+  const players = state.players.map((p) => {
+    const { drawn, remaining } = drawResources(remainingPool, HAND_SIZE);
+    remainingPool = remaining;
+    return {
       ...p,
-      hand: [],
+      hand: drawn,
       selectedResources: [],
       hasDiscarded: false,
       hasSubmitted: false,
       evaluation: undefined,
-    })),
-  });
-}
-
-export function dealDraftRound(state: GameState): GameState {
-  let pool = [...state.resourcePool];
-  const players = state.players.map((p) => {
-    const { drawn, remaining } = drawResources(pool, DRAW_PER_ROUND);
-    pool = remaining;
-    return { ...p, hand: [...p.hand, ...drawn], hasDiscarded: false };
+    };
   });
 
-  return { ...state, players, resourcePool: pool };
+  return {
+    ...state,
+    players,
+    resourcePool: remainingPool,
+    discardPile: [],
+    phase: "drafting",
+    round: 1,
+    maxRounds: 5,
+  };
 }
 
 export function applyDiscard(
@@ -103,11 +101,17 @@ export function applyDiscard(
   discardIndices: number[]
 ): GameState {
   const discardSet = new Set(discardIndices);
+  const discardCount = discardSet.size;
+
+  // 捨てた分だけプールから補充
+  let pool = [...state.resourcePool];
+  const { drawn, remaining } = drawResources(pool, discardCount);
+  pool = remaining;
 
   const players = state.players.map((p) => {
     if (p.id !== playerId) return p;
     const hand = p.hand.filter((_, i) => !discardSet.has(i));
-    return { ...p, hand, hasDiscarded: true };
+    return { ...p, hand: [...hand, ...drawn], hasDiscarded: true };
   });
 
   const discardedPlayer = state.players.find((p) => p.id === playerId);
@@ -116,11 +120,11 @@ export function applyDiscard(
     : [];
   const discardPile = [...state.discardPile, ...discardedCards];
 
-  const newState = { ...state, players, discardPile };
+  const newState = { ...state, players, resourcePool: pool, discardPile };
 
-  // 全員がdiscard済みかチェック
+  // 全員がdiscard済みなら構築フェーズへ
   if (newState.players.every((p) => p.hasDiscarded)) {
-    return advanceRound(newState);
+    return { ...newState, phase: "building" };
   }
 
   return newState;
@@ -141,17 +145,6 @@ export function applyCPUDiscards(state: GameState): GameState {
   }
 
   return currentState;
-}
-
-function advanceRound(state: GameState): GameState {
-  if (state.round >= state.maxRounds) {
-    return { ...state, phase: "building" };
-  }
-
-  return dealDraftRound({
-    ...state,
-    round: state.round + 1,
-  });
 }
 
 export function submitArchitecture(
@@ -199,15 +192,48 @@ export function applyEvaluations(
   state: GameState,
   results: Record<string, { score: number; grade: string; title: string; feedback: string; strengths: string[]; weaknesses: string[] }>
 ): GameState {
-  const players = state.players.map((p) => ({
-    ...p,
-    evaluation: results[p.id] ? {
-      ...results[p.id],
-      grade: results[p.id].grade as "S" | "A" | "B" | "C" | "D",
-    } : p.evaluation,
-  }));
+  const players = state.players.map((p) => {
+    const roundEval = results[p.id];
+    if (!roundEval) return p;
+    return {
+      ...p,
+      evaluation: {
+        ...roundEval,
+        grade: roundEval.grade as "S" | "A" | "B" | "C" | "D",
+      },
+      totalScore: p.totalScore + roundEval.score,
+    };
+  });
 
-  return { ...state, players, phase: "result" };
+  const isFinalRound = state.round >= state.maxRounds;
+  return { ...state, players, phase: isFinalRound ? "result" : "roundResult" };
+}
+
+export function startNextRound(state: GameState): GameState {
+  const pool = createResourcePool();
+
+  let remainingPool = [...pool];
+  const players = state.players.map((p) => {
+    const { drawn, remaining } = drawResources(remainingPool, HAND_SIZE);
+    remainingPool = remaining;
+    return {
+      ...p,
+      hand: drawn,
+      selectedResources: [],
+      hasDiscarded: false,
+      hasSubmitted: false,
+      evaluation: undefined,
+    };
+  });
+
+  return {
+    ...state,
+    players,
+    resourcePool: remainingPool,
+    discardPile: [],
+    phase: "drafting",
+    round: state.round + 1,
+  };
 }
 
 export function getCPUPersonality(playerId: string): CPUPersonality {

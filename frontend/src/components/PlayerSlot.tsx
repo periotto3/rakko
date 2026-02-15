@@ -32,21 +32,9 @@ export default function PlayerSlot({
             CPU
           </span>
         )}
-        {player.evaluation && (
-          <span
-            className={`ml-auto text-sm font-bold ${
-              player.evaluation.grade === "S"
-                ? "text-yellow-400"
-                : player.evaluation.grade === "A"
-                  ? "text-green-400"
-                  : player.evaluation.grade === "B"
-                    ? "text-blue-400"
-                    : player.evaluation.grade === "C"
-                      ? "text-orange-400"
-                      : "text-gray-400"
-            }`}
-          >
-            {player.evaluation.grade} ({player.evaluation.score}点)
+        {player.totalScore > 0 && (
+          <span className="ml-auto text-slate-300 text-xs font-medium">
+            {player.totalScore}点
           </span>
         )}
       </div>

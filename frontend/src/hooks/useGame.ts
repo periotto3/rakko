@@ -13,6 +13,7 @@ import {
   submitArchitecture,
   applyCPUSubmissions,
   applyEvaluations,
+  startNextRound,
 } from "@/lib/gameEngine";
 import { MockArchitectureEvaluator } from "@/lib/mockEvaluator";
 
@@ -27,6 +28,7 @@ type GameAction =
   | { type: "SELECT_ARCHITECTURE"; playerId: string; resourceIds: string[] }
   | { type: "CPU_SELECT_ARCHITECTURE" }
   | { type: "SET_EVALUATIONS"; results: Record<string, ArchitectureEvaluation> }
+  | { type: "NEXT_ROUND" }
   | { type: "RESET" };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -60,6 +62,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_EVALUATIONS":
       return applyEvaluations(state, action.results);
 
+    case "NEXT_ROUND":
+      if (state.phase !== "roundResult") return state;
+      return startNextRound(state);
+
     case "RESET":
       return createInitialState();
 
@@ -89,6 +95,10 @@ export function useGame() {
 
   const handleSubmitArchitecture = useCallback((playerId: string, resourceIds: string[]) => {
     dispatch({ type: "SELECT_ARCHITECTURE", playerId, resourceIds });
+  }, []);
+
+  const handleNextRound = useCallback(() => {
+    dispatch({ type: "NEXT_ROUND" });
   }, []);
 
   const handleReset = useCallback(() => {
@@ -175,6 +185,7 @@ export function useGame() {
     handleStartGame,
     handleDiscard,
     handleSubmitArchitecture,
+    handleNextRound,
     handleReset,
   };
 }
