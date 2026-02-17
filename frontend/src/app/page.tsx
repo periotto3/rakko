@@ -13,7 +13,7 @@ export default function Home() {
 
       <div className="flex flex-col items-center gap-4">
         <Link
-          href="/game"
+          href="/waiting"
           className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xl transition-colors shadow-lg"
         >
           対戦する

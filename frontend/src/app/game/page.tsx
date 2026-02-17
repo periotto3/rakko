@@ -1,49 +1,30 @@
 "use client";
 
-import { useGame } from "@/hooks/useGame";
-import { allReady } from "@/lib/gameEngine";
-import Lobby from "@/components/Lobby";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useGameContext } from "@/contexts/GameContext";
 import GameTable from "@/components/GameTable";
 import RoundResultScreen from "@/components/RoundResultScreen";
 import ResultScreen from "@/components/ResultScreen";
 
 export default function GamePage() {
+  const router = useRouter();
   const {
     state,
-    joinLobby,
-    togglePlayerReady,
-    handleStartGame,
     handleDiscard,
     handleSubmitArchitecture,
     handleNextRound,
     handleReset,
-  } = useGame();
+  } = useGameContext();
+
+  // ゲーム未開始なら /waiting にリダイレクト
+  useEffect(() => {
+    if (state.phase === "idle" || state.phase === "lobby") {
+      router.push("/waiting");
+    }
+  }, [state.phase, router]);
 
   switch (state.phase) {
-    case "idle":
-      return (
-        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-6">
-          <h1 className="text-4xl font-bold text-white">Rakko</h1>
-          <p className="text-slate-400">AWS構成バトル</p>
-          <button
-            onClick={joinLobby}
-            className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xl transition-colors"
-          >
-            ロビーに参加
-          </button>
-        </div>
-      );
-
-    case "lobby":
-      return (
-        <Lobby
-          players={state.players}
-          onReady={() => togglePlayerReady("player")}
-          onStart={handleStartGame}
-          allReady={allReady(state)}
-        />
-      );
-
     case "drafting":
     case "building":
       return (

@@ -43,11 +43,11 @@ const AWS_RESOURCE_CATALOG: ResourceTemplate[] = [
 ];
 
 let nextId = 0;
-
+//同じカードを区別するために固有idを付与
 function instantiate(template: ResourceTemplate): AWSResource {
   return { ...template, id: `${template.service}-${nextId++}` };
 }
-
+// 56枚のデッキ作成
 export function createResourcePool(): AWSResource[] {
   nextId = 0;
   const pool: AWSResource[] = [];

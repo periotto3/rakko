@@ -10,7 +10,7 @@ export const AWS_CATEGORIES = [
   "serverless",
   "security",
 ] as const;
-export type AWSCategory = (typeof AWS_CATEGORIES)[number];
+export type AWSCategory = (typeof AWS_CATEGORIES)[number]; //カテゴリーのどれかが入る
 
 export type AWSResource = {
   id: string;
@@ -65,7 +65,7 @@ export type GamePhase =
   | "evaluating"
   | "roundResult"
   | "result";
-
+// GamePhaseはこれらのどれか一つだけを持てる
 // ============================================
 // Player Actions
 // ============================================
@@ -115,4 +115,4 @@ export type RankedPlayer = {
 // CPU Personality
 // ============================================
 
-export type CPUPersonality = "serverless-fan" | "traditional" | "balanced";
+export type CPUPersonality = "serverless-fan" | "traditional" | "balanced";// いったんCPUなのでここは破棄予定？
