@@ -26,22 +26,28 @@ npm run dev
 ```
 src/
 ├── app/
-│   ├── page.tsx                    # ホーム（/babanuki へのリンク）
-│   ├── layout.tsx                  # ルートレイアウト
+│   ├── page.tsx                          # ホーム（/babanuki へのリンク）
+│   ├── layout.tsx                        # ルートレイアウト
 │   └── babanuki/
-│       └── page.tsx                # ゲームのメインページ（フェーズ管理）
+│       └── page.tsx                      # ゲームのメインページ（フェーズ管理）
 │
-├── components/babanuki/
-│   ├── TitleScreen.tsx             # タイトル画面
-│   ├── WaitingScreen.tsx           # 待機画面（テーマルーレット）
-│   ├── GeneratingScreen.tsx        # AI生成中画面（モック）
-│   ├── PlayScreen.tsx              # プレイ画面
-│   └── ResultScreen.tsx            # 結果画面
-│
-└── lib/babanuki/
-    ├── types.ts                    # 型定義
-    └── engine.ts                   # ゲームロジック
+└── features/babanuki/                    # babanuki 機能モジュール
+    ├── index.ts                          # public API（外部へのexport窓口）
+    ├── components/
+    │   ├── TitleScreen.tsx               # タイトル画面
+    │   ├── WaitingScreen.tsx             # 待機画面（テーマルーレット）
+    │   ├── GeneratingScreen.tsx          # AI生成中画面
+    │   ├── PlayScreen.tsx                # プレイ画面
+    │   └── ResultScreen.tsx              # 結果画面
+    ├── lib/
+    │   ├── types.ts                      # 型定義
+    │   └── engine.ts                     # ゲームロジック
+    └── services/
+        ├── imageGeneration.ts            # 切り替え口（1行変更で本実装に移行）
+        └── imageGeneration.mock.ts       # モック実装（即時空文字を返す）
 ```
+
+`app/babanuki/page.tsx` は `@/features/babanuki` の public API（`index.ts`）のみをimportします。
 
 ---
 
@@ -59,7 +65,7 @@ title → waiting → generating → playing → result
 |---|---|---|
 | `title` | TitleScreen | スタートボタン、ルール説明 |
 | `waiting` | WaitingScreen | プレイヤー参加待ち + テーマルーレット |
-| `generating` | GeneratingScreen | AI背景画像生成中（現在はモック） |
+| `generating` | GeneratingScreen | AI背景画像生成中 |
 | `playing` | PlayScreen | ゲーム本体 |
 | `result` | ResultScreen | 勝者表示 |
 
@@ -67,7 +73,7 @@ title → waiting → generating → playing → result
 
 ---
 
-## ゲームロジック（`lib/babanuki/engine.ts`）
+## ゲームロジック（`features/babanuki/lib/engine.ts`）
 
 ### デッキ
 
@@ -122,15 +128,31 @@ CPUのカード選択は `cpuChooseCard()` によるランダム選択です。
 
 ---
 
-## AI背景画像生成（現在はモック）
+## AI背景画像生成
 
-`GeneratingScreen` はプログレスバーのアニメーションのみで、実際の生成は行っていません。
+`features/babanuki/services/imageGeneration.ts` で実装を切り替えます。
+
+```
+services/
+├── imageGeneration.ts        # TODO: 本番時は re-export 先を .real に変更
+├── imageGeneration.mock.ts   # モック（即時空文字を返す）
+└── imageGeneration.real.ts   # 本実装（未作成）
+```
+
+### データフロー
+
+```
+GeneratingScreen
+  → generateBackgroundImage(theme)  // services/imageGeneration.ts を呼ぶ
+  → onComplete(imageUrl)
+      → page.tsx が backgroundImage state に保存
+          → PlayScreen に backgroundImage prop として渡す
+```
 
 ### バックエンド接続時の変更箇所
 
-1. **`GeneratingScreen.tsx`** — `onComplete()` → `onComplete(imageUrl: string)` に変更し、API呼び出しを追加
-2. **`app/babanuki/page.tsx`** — `backgroundImage` stateを追加し、`PlayScreen` に渡す
-3. **`PlayScreen.tsx`** — `backgroundImage?: string` propを受け取り、CSSグラデーションの代わりに使用
+1. **`services/imageGeneration.real.ts`** を作成し、実際のAPI呼び出しを実装
+2. **`services/imageGeneration.ts`** の1行を `.mock` → `.real` に変更するだけ
 
 ---
 
