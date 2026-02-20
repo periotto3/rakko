@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { BabanukiPlayer, ThemeSlot, GamePhase } from "@/lib/babanuki/types";
-import { dealCards } from "@/lib/babanuki/engine";
-import TitleScreen from "@/components/babanuki/TitleScreen";
-import WaitingScreen from "@/components/babanuki/WaitingScreen";
-import GeneratingScreen from "@/components/babanuki/GeneratingScreen";
-import PlayScreen from "@/components/babanuki/PlayScreen";
-import ResultScreen from "@/components/babanuki/ResultScreen";
+import {
+  BabanukiPlayer,
+  ThemeSlot,
+  GamePhase,
+  TitleScreen,
+  WaitingScreen,
+  GeneratingScreen,
+  PlayScreen,
+  ResultScreen,
+  dealCards,
+} from "@/features/babanuki";
 
 const MAX_PLAYERS = 4;
 
@@ -17,6 +21,7 @@ export default function BabanukiPage() {
   const [theme, setTheme] = useState<ThemeSlot | null>(null);
   const [winner, setWinner] = useState<BabanukiPlayer | null>(null);
   const [finalPlayers, setFinalPlayers] = useState<BabanukiPlayer[]>([]);
+  const [backgroundImage, setBackgroundImage] = useState<string>("");
   const cpuJoinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Cleanup timers on unmount
@@ -27,7 +32,6 @@ export default function BabanukiPage() {
   }, []);
 
   const handleStart = useCallback(() => {
-    // Start with empty players, then add one by one to trigger roulette
     setPlayers([]);
     setPhase("waiting");
 
@@ -57,7 +61,8 @@ export default function BabanukiPage() {
     setPhase("generating");
   }, []);
 
-  const handleGenerationComplete = useCallback(() => {
+  const handleGenerationComplete = useCallback((imageUrl: string) => {
+    setBackgroundImage(imageUrl);
     setPlayers((prev) => dealCards(prev));
     setPhase("playing");
   }, []);
@@ -78,6 +83,7 @@ export default function BabanukiPage() {
     setTheme(null);
     setWinner(null);
     setFinalPlayers([]);
+    setBackgroundImage("");
     setPhase("title");
   }, []);
 
@@ -108,6 +114,7 @@ export default function BabanukiPage() {
           initialPlayers={players}
           theme={theme!}
           onGameEnd={handleGameEnd}
+          backgroundImage={backgroundImage || undefined}
         />
       );
 

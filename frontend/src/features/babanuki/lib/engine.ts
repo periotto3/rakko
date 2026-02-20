@@ -110,14 +110,12 @@ export function drawCard(
   let count = finishedCount;
   const newlyFinished: number[] = [];
 
-  // Check if target finished
   if (updated[targetIndex].hand.length === 0 && updated[targetIndex].finishedOrder === null) {
     count++;
     updated[targetIndex].finishedOrder = count;
     newlyFinished.push(targetIndex);
   }
 
-  // Check if drawer finished
   if (updated[drawerIndex].hand.length === 0 && updated[drawerIndex].finishedOrder === null) {
     count++;
     updated[drawerIndex].finishedOrder = count;

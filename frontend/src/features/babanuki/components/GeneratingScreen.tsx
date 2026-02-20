@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ThemeSlot } from "@/lib/babanuki/types";
+import { ThemeSlot } from "../lib/types";
+import { generateBackgroundImage } from "../services/imageGeneration";
 
 interface GeneratingScreenProps {
   theme: ThemeSlot;
-  onComplete: () => void;
+  onComplete: (imageUrl: string) => void;
 }
 
 export default function GeneratingScreen({
@@ -13,7 +14,16 @@ export default function GeneratingScreen({
   onComplete,
 }: GeneratingScreenProps) {
   const [progress, setProgress] = useState(0);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+  // Kick off image generation (mock or real)
+  useEffect(() => {
+    generateBackgroundImage(theme).then((url) => {
+      setImageUrl(url);
+    });
+  }, [theme]);
+
+  // Progress bar animation
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -21,7 +31,6 @@ export default function GeneratingScreen({
           clearInterval(interval);
           return 100;
         }
-        // Random increment speed to simulate AI generation
         return Math.min(prev + Math.random() * 8 + 2, 100);
       });
     }, 200);
@@ -29,12 +38,13 @@ export default function GeneratingScreen({
     return () => clearInterval(interval);
   }, []);
 
+  // Complete when both progress and image are ready
   useEffect(() => {
-    if (progress >= 100) {
-      const timeout = setTimeout(onComplete, 500);
+    if (progress >= 100 && imageUrl !== null) {
+      const timeout = setTimeout(() => onComplete(imageUrl), 500);
       return () => clearTimeout(timeout);
     }
-  }, [progress, onComplete]);
+  }, [progress, imageUrl, onComplete]);
 
   const themeText = `${theme.who} ${theme.when} ${theme.where} ${theme.what}`;
 
@@ -49,7 +59,6 @@ export default function GeneratingScreen({
           テーマ: 「{themeText}」
         </p>
 
-        {/* Progress bar */}
         <div className="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all duration-300 ease-out"

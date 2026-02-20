@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { BabanukiPlayer, ThemeSlot } from "@/lib/babanuki/types";
+import { BabanukiPlayer, ThemeSlot } from "../lib/types";
 import {
   THEME_WHO,
   THEME_WHEN,
   THEME_WHERE,
   THEME_WHAT,
-} from "@/lib/babanuki/engine";
+} from "../lib/engine";
 
 interface WaitingScreenProps {
   players: BabanukiPlayer[];
@@ -88,7 +88,6 @@ export default function WaitingScreen({
   maxPlayers,
   onThemeDecided,
 }: WaitingScreenProps) {
-  // Track which slot index to spin next (0=who, 1=when, 2=where, 3=what)
   const [nextSlotIndex, setNextSlotIndex] = useState(0);
   const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeSlot>({
@@ -99,7 +98,6 @@ export default function WaitingScreen({
   });
   const [decided, setDecided] = useState(false);
 
-  // Spin one slot when a new player joins
   const prevPlayerCount = useRef(players.length);
   useEffect(() => {
     if (players.length > prevPlayerCount.current && nextSlotIndex < SLOT_KEYS.length && !decided) {
@@ -129,12 +127,10 @@ export default function WaitingScreen({
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
-      {/* Player count */}
       <h1 className="text-3xl font-bold mb-2">
         {allJoined ? "全員そろいました！" : `${players.length}/${maxPlayers}人を待っています...`}
       </h1>
 
-      {/* Player avatars */}
       <div className="flex gap-3 mb-8">
         {players.map((p) => (
           <div key={p.id} className="flex flex-col items-center">
@@ -150,7 +146,6 @@ export default function WaitingScreen({
         ))}
       </div>
 
-      {/* Theme roulette */}
       <h2 className="text-2xl font-bold mb-4">テーマルーレット</h2>
 
       <div className="bg-yellow-200 rounded-2xl p-6 w-full max-w-sm shadow-lg">
@@ -167,7 +162,6 @@ export default function WaitingScreen({
           ))}
         </div>
 
-        {/* Progress indicator */}
         <div className="mt-4 flex gap-1 justify-center">
           {SLOT_KEYS.map((_, i) => (
             <div
@@ -184,7 +178,6 @@ export default function WaitingScreen({
         </div>
       </div>
 
-      {/* Start button - show when all joined AND all slots decided */}
       {allJoined && allSlotsLocked && !decided && spinningSlot === null && (
         <button
           onClick={handleDecide}
@@ -194,7 +187,6 @@ export default function WaitingScreen({
         </button>
       )}
 
-      {/* Home button */}
       <button
         onClick={() => window.location.reload()}
         className="mt-4 bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-bold py-2 px-6 rounded-xl text-sm transition-all"

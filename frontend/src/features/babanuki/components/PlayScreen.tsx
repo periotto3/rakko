@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { BabanukiPlayer, Card, ThemeSlot } from "@/lib/babanuki/types";
+import { BabanukiPlayer, Card, ThemeSlot } from "../lib/types";
 import {
   drawCard,
   cpuChooseCard,
@@ -9,12 +9,13 @@ import {
   getNextActivePlayer,
   isGameOver,
   getWinner,
-} from "@/lib/babanuki/engine";
+} from "../lib/engine";
 
 interface PlayScreenProps {
   initialPlayers: BabanukiPlayer[];
   theme: ThemeSlot;
   onGameEnd: (winner: BabanukiPlayer, players: BabanukiPlayer[]) => void;
+  backgroundImage?: string;
 }
 
 const SUIT_SYMBOLS: Record<string, string> = {
@@ -112,7 +113,6 @@ function OpponentCharacter({
   isCurrentTurn,
   isTarget,
   onCardClick,
-  position,
 }: {
   player: BabanukiPlayer;
   isCurrentTurn: boolean;
@@ -124,7 +124,6 @@ function OpponentCharacter({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      {/* Character avatar */}
       <div
         className={`relative transition-all ${isCurrentTurn ? "scale-110" : ""}`}
       >
@@ -141,7 +140,6 @@ function OpponentCharacter({
         )}
       </div>
 
-      {/* Status box */}
       <div className="bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-center min-w-[90px] border border-white/10">
         <div className="text-white text-xs font-bold">{player.name}</div>
         <div className="text-[10px] text-gray-300">
@@ -153,7 +151,6 @@ function OpponentCharacter({
         </div>
       </div>
 
-      {/* Cards row */}
       {!finished && (
         <div className="flex gap-1 flex-wrap justify-center">
           {player.hand.map((_, i) => (
@@ -171,7 +168,7 @@ function OpponentCharacter({
   );
 }
 
-/* ─── Player Hand (fan layout) ─── */
+/* ─── Player Hand ─── */
 
 function PlayerHand({ player }: { player: BabanukiPlayer }) {
   const finished = player.hand.length === 0;
@@ -199,6 +196,7 @@ export default function PlayScreen({
   initialPlayers,
   theme,
   onGameEnd,
+  backgroundImage,
 }: PlayScreenProps) {
   const [players, setPlayers] = useState(initialPlayers);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
@@ -413,32 +411,42 @@ export default function PlayScreen({
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden select-none">
-      {/* Background - atmospheric scene */}
+      {/* Background */}
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 30%, #4a1a6b 0%, #2d1040 30%, #1a0a2e 60%, #0a0414 100%)",
-        }}
+        style={
+          backgroundImage
+            ? {
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : {
+                background:
+                  "radial-gradient(ellipse at 50% 30%, #4a1a6b 0%, #2d1040 30%, #1a0a2e 60%, #0a0414 100%)",
+              }
+        }
       />
-      {/* Stars */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 40 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white"
-            style={{
-              width: `${1 + Math.random() * 2}px`,
-              height: `${1 + Math.random() * 2}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 50}%`,
-              opacity: 0.3 + Math.random() * 0.5,
-              animation: `pulse ${2 + Math.random() * 3}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 2}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Stars (shown only when no background image) */}
+      {!backgroundImage && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 40 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: `${1 + Math.random() * 2}px`,
+                height: `${1 + Math.random() * 2}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 50}%`,
+                opacity: 0.3 + Math.random() * 0.5,
+                animation: `pulse ${2 + Math.random() * 3}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 2}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Header bar */}
       <div className="relative z-10 flex items-center justify-between px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10">
@@ -536,19 +544,16 @@ export default function PlayScreen({
             {/* Center content on table */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
-                {/* Message bubble */}
                 <div className="bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-xs font-bold text-center max-w-[280px] border border-white/10">
                   {message}
                 </div>
 
-                {/* Draw info */}
                 {lastDrawnInfo && (
                   <div className="bg-yellow-400/90 text-gray-900 px-3 py-1 rounded-lg text-xs font-bold shadow-lg animate-bounce">
                     {lastDrawnInfo}
                   </div>
                 )}
 
-                {/* Mini scoreboard */}
                 <div className="flex gap-3">
                   {players.map((p) => (
                     <div
@@ -570,7 +575,6 @@ export default function PlayScreen({
               </div>
             </div>
 
-            {/* Decorative items */}
             <div className="absolute bottom-3 left-4 text-2xl opacity-70">
               &#x1F4A3;
             </div>
@@ -585,7 +589,6 @@ export default function PlayScreen({
 
         {/* Player area at bottom */}
         <div className="pb-4 px-4">
-          {/* Player info bar */}
           <div className="flex items-center justify-center gap-3 mb-1">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 shadow
@@ -606,7 +609,6 @@ export default function PlayScreen({
             )}
           </div>
 
-          {/* Player cards fan */}
           <PlayerHand player={players[0]} />
         </div>
       </div>
