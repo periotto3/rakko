@@ -1,30 +1,22 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
-  BabanukiPlayer,
   ThemeSlot,
-  GamePhase,
   TitleScreen,
   WaitingScreen,
   GeneratingScreen,
   PlayScreen,
   ResultScreen,
-  dealCards,
 } from "@/features/babanuki";
+import { useGameState } from "@/features/babanuki/hooks/useGameState";
 
 const MAX_PLAYERS = 4;
 
 export default function BabanukiPage() {
-  const [phase, setPhase] = useState<GamePhase>("title");
-  const [players, setPlayers] = useState<BabanukiPlayer[]>([]);
-  const [theme, setTheme] = useState<ThemeSlot | null>(null);
-  const [winner, setWinner] = useState<BabanukiPlayer | null>(null);
-  const [finalPlayers, setFinalPlayers] = useState<BabanukiPlayer[]>([]);
-  const [backgroundImage, setBackgroundImage] = useState<string>("");
+  const [state, dispatch] = useGameState();
   const cpuJoinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       cpuJoinTimers.current.forEach(clearTimeout);
@@ -32,8 +24,9 @@ export default function BabanukiPage() {
   }, []);
 
   const handleStart = useCallback(() => {
-    setPlayers([]);
-    setPhase("waiting");
+    cpuJoinTimers.current.forEach(clearTimeout);
+    cpuJoinTimers.current = [];
+    dispatch({ type: "START_GAME" });
 
     const allJoiners = [
       { id: "human", name: "あなた", avatar: "😊", isCPU: false },
@@ -44,57 +37,43 @@ export default function BabanukiPage() {
 
     allJoiners.forEach((p, i) => {
       const timer = setTimeout(() => {
-        setPlayers((prev) => {
-          if (prev.find((existing) => existing.id === p.id)) return prev;
-          return [
-            ...prev,
-            { ...p, hand: [], finishedOrder: null },
-          ];
+        dispatch({
+          type: "PLAYER_JOIN",
+          payload: { ...p, hand: [], finishedOrder: null },
         });
       }, 500 + i * 2500);
       cpuJoinTimers.current.push(timer);
     });
-  }, []);
+  }, [dispatch]);
 
-  const handleThemeDecided = useCallback((decidedTheme: ThemeSlot) => {
-    setTheme(decidedTheme);
-    setPhase("generating");
-  }, []);
-
-  const handleGenerationComplete = useCallback((imageUrl: string) => {
-    setBackgroundImage(imageUrl);
-    setPlayers((prev) => dealCards(prev));
-    setPhase("playing");
-  }, []);
-
-  const handleGameEnd = useCallback(
-    (gameWinner: BabanukiPlayer, endPlayers: BabanukiPlayer[]) => {
-      setWinner(gameWinner);
-      setFinalPlayers(endPlayers);
-      setPhase("result");
+  const handleThemeDecided = useCallback(
+    (theme: ThemeSlot) => {
+      dispatch({ type: "SET_THEME", payload: theme });
     },
-    []
+    [dispatch]
+  );
+
+  const handleGenerationComplete = useCallback(
+    (imageUrl: string) => {
+      dispatch({ type: "GENERATION_COMPLETE", payload: { imageUrl } });
+    },
+    [dispatch]
   );
 
   const handleRematch = useCallback(() => {
     cpuJoinTimers.current.forEach(clearTimeout);
     cpuJoinTimers.current = [];
-    setPlayers([]);
-    setTheme(null);
-    setWinner(null);
-    setFinalPlayers([]);
-    setBackgroundImage("");
-    setPhase("title");
-  }, []);
+    dispatch({ type: "REMATCH" });
+  }, [dispatch]);
 
-  switch (phase) {
+  switch (state.phase) {
     case "title":
       return <TitleScreen onStart={handleStart} />;
 
     case "waiting":
       return (
         <WaitingScreen
-          players={players}
+          players={state.players}
           maxPlayers={MAX_PLAYERS}
           onThemeDecided={handleThemeDecided}
         />
@@ -103,7 +82,7 @@ export default function BabanukiPage() {
     case "generating":
       return (
         <GeneratingScreen
-          theme={theme!}
+          theme={state.theme!}
           onComplete={handleGenerationComplete}
         />
       );
@@ -111,18 +90,20 @@ export default function BabanukiPage() {
     case "playing":
       return (
         <PlayScreen
-          initialPlayers={players}
-          theme={theme!}
-          onGameEnd={handleGameEnd}
-          backgroundImage={backgroundImage || undefined}
+          players={state.players}
+          currentTurnIndex={state.currentTurnIndex}
+          targetIndex={state.targetIndex}
+          theme={state.theme!}
+          backgroundImage={state.backgroundImage || undefined}
+          dispatch={dispatch}
         />
       );
 
     case "result":
       return (
         <ResultScreen
-          winner={winner!}
-          players={finalPlayers}
+          winner={state.winner!}
+          players={state.finalPlayers}
           onRematch={handleRematch}
         />
       );

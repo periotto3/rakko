@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { Dispatch } from "react";
 import { BabanukiPlayer, Card, ThemeSlot } from "../lib/types";
+import type { GameAction } from "../lib/gameActions";
 import {
   drawCard,
   cpuChooseCard,
@@ -12,10 +14,12 @@ import {
 } from "../lib/engine";
 
 interface PlayScreenProps {
-  initialPlayers: BabanukiPlayer[];
+  players: BabanukiPlayer[];
+  currentTurnIndex: number;
+  targetIndex: number;
   theme: ThemeSlot;
-  onGameEnd: (winner: BabanukiPlayer, players: BabanukiPlayer[]) => void;
   backgroundImage?: string;
+  dispatch: Dispatch<GameAction>;
 }
 
 const SUIT_SYMBOLS: Record<string, string> = {
@@ -193,21 +197,17 @@ function PlayerHand({ player }: { player: BabanukiPlayer }) {
 /* ─── Main PlayScreen ─── */
 
 export default function PlayScreen({
-  initialPlayers,
+  players,
+  currentTurnIndex,
+  targetIndex,
   theme,
-  onGameEnd,
   backgroundImage,
+  dispatch,
 }: PlayScreenProps) {
-  const [players, setPlayers] = useState(initialPlayers);
-  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
-  const [targetIndex, setTargetIndex] = useState(() =>
-    getDrawTarget(initialPlayers, 0)
-  );
   const [message, setMessage] = useState(
     "あなたのターンです。相手のカードをクリックして引いてください！"
   );
   const [isProcessing, setIsProcessing] = useState(false);
-  const [finishedCount, setFinishedCount] = useState(0);
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
 
   const processingRef = useRef(false);
@@ -256,8 +256,10 @@ export default function PlayScreen({
         }
       }
 
-      setPlayers(result.players);
-      setFinishedCount(result.finishedCount);
+      dispatch({
+        type: "UPDATE_GAME",
+        payload: { players: result.players, currentTurnIndex: turnIndex, targetIndex: turnTarget },
+      });
 
       const afterDraw = () => {
         if (isGameOver(result.players)) {
@@ -267,18 +269,26 @@ export default function PlayScreen({
             }
             return p;
           });
-          setPlayers(final);
+          dispatch({
+            type: "UPDATE_GAME",
+            payload: { players: final, currentTurnIndex: turnIndex, targetIndex: -1 },
+          });
           processingRef.current = false;
           setIsProcessing(false);
           const winner = getWinner(final);
-          setTimeout(() => onGameEnd(winner, final), 1500);
+          setTimeout(
+            () => dispatch({ type: "GAME_OVER", payload: { winner, finalPlayers: final } }),
+            1500
+          );
           return;
         }
 
         const next = getNextActivePlayer(result.players, turnIndex);
         const nextTarget = getDrawTarget(result.players, next);
-        setCurrentTurnIndex(next);
-        setTargetIndex(nextTarget);
+        dispatch({
+          type: "UPDATE_GAME",
+          payload: { players: result.players, currentTurnIndex: next, targetIndex: nextTarget },
+        });
 
         if (!result.players[next].isCPU) {
           setMessage(
@@ -310,7 +320,7 @@ export default function PlayScreen({
         afterDraw();
       }
     },
-    [onGameEnd]
+    [dispatch]
   );
 
   useEffect(() => {
@@ -318,18 +328,20 @@ export default function PlayScreen({
     if (players[currentTurnIndex]?.isCPU && !isGameOver(players)) {
       processingRef.current = true;
       setIsProcessing(true);
+      const fc = players.filter((p) => p.finishedOrder !== null).length;
       const delay = 800 + Math.random() * 700;
       cpuTimeoutRef.current = setTimeout(() => {
-        executeTurn(players, currentTurnIndex, targetIndex, finishedCount);
+        executeTurn(players, currentTurnIndex, targetIndex, fc);
       }, delay);
     }
-  }, [currentTurnIndex, players, targetIndex, finishedCount, executeTurn]);
+  }, [currentTurnIndex, players, targetIndex, executeTurn]);
 
   const handlePlayerDraw = (cardIndex: number) => {
     if (processingRef.current || players[currentTurnIndex].isCPU) return;
     processingRef.current = true;
     setIsProcessing(true);
 
+    const finishedCount = players.filter((p) => p.finishedOrder !== null).length;
     const result = drawCard(
       players,
       currentTurnIndex,
@@ -357,8 +369,10 @@ export default function PlayScreen({
       }
     }
 
-    setPlayers(result.players);
-    setFinishedCount(result.finishedCount);
+    dispatch({
+      type: "UPDATE_GAME",
+      payload: { players: result.players, currentTurnIndex, targetIndex },
+    });
 
     const afterDraw = () => {
       if (isGameOver(result.players)) {
@@ -368,18 +382,26 @@ export default function PlayScreen({
           }
           return p;
         });
-        setPlayers(final);
+        dispatch({
+          type: "UPDATE_GAME",
+          payload: { players: final, currentTurnIndex, targetIndex: -1 },
+        });
         processingRef.current = false;
         setIsProcessing(false);
         const winner = getWinner(final);
-        setTimeout(() => onGameEnd(winner, final), 1500);
+        setTimeout(
+          () => dispatch({ type: "GAME_OVER", payload: { winner, finalPlayers: final } }),
+          1500
+        );
         return;
       }
 
       const next = getNextActivePlayer(result.players, currentTurnIndex);
       const nextTarget = getDrawTarget(result.players, next);
-      setCurrentTurnIndex(next);
-      setTargetIndex(nextTarget);
+      dispatch({
+        type: "UPDATE_GAME",
+        payload: { players: result.players, currentTurnIndex: next, targetIndex: nextTarget },
+      });
 
       if (!result.players[next].isCPU) {
         setMessage(
