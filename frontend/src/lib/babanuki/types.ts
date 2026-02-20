@@ -1,0 +1,42 @@
+export type Suit = "spades" | "hearts" | "diamonds" | "clubs";
+
+export interface Card {
+  id: string;
+  suit: Suit | "joker";
+  rank: number; // 1-13, 0 for joker
+  label: string; // "A", "2"..."K", "JOKER"
+}
+
+export interface BabanukiPlayer {
+  id: string;
+  name: string;
+  isCPU: boolean;
+  hand: Card[];
+  finishedOrder: number | null; // 上がり順 (1st, 2nd, etc.)
+  avatar: string;
+}
+
+export type GamePhase =
+  | "title"
+  | "waiting"
+  | "generating"
+  | "playing"
+  | "result";
+
+export interface ThemeSlot {
+  who: string;
+  when: string;
+  where: string;
+  what: string;
+}
+
+export interface BabanukiState {
+  phase: GamePhase;
+  players: BabanukiPlayer[];
+  currentTurnIndex: number;
+  targetPlayerIndex: number;
+  theme: ThemeSlot | null;
+  finishedCount: number;
+  winner: BabanukiPlayer | null;
+  generationProgress: number;
+}
