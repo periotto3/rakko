@@ -1,46 +1,13 @@
 import { Card, Suit, BabanukiPlayer, BabanukiState, ThemeSlot } from "./types";
-
-// 26種類 × 2枚 = 52枚。同じrank同士がペア
-const AWS_SERVICES: { label: string; suit: Suit; rank: number }[] = [
-  // Compute (ranks 1-7)
-  { label: "EC2",      suit: "compute", rank: 1  },
-  { label: "Lambda",   suit: "compute", rank: 2  },
-  { label: "ECS",      suit: "compute", rank: 3  },
-  { label: "EKS",      suit: "compute", rank: 4  },
-  { label: "Fargate",  suit: "compute", rank: 5  },
-  { label: "SAM",      suit: "compute", rank: 6  },
-  { label: "CDK",      suit: "compute", rank: 7  },
-  // Storage (ranks 8-13)
-  { label: "S3",       suit: "storage", rank: 8  },
-  { label: "EBS",      suit: "storage", rank: 9  },
-  { label: "EFS",      suit: "storage", rank: 10 },
-  { label: "Glacier",  suit: "storage", rank: 11 },
-  { label: "DataSync", suit: "storage", rank: 12 },
-  { label: "Snowball", suit: "storage", rank: 13 },
-  // Database (ranks 14-19)
-  { label: "RDS",      suit: "database", rank: 14 },
-  { label: "DynamoDB", suit: "database", rank: 15 },
-  { label: "E.Cache",  suit: "database", rank: 16 },
-  { label: "Aurora",   suit: "database", rank: 17 },
-  { label: "Redshift", suit: "database", rank: 18 },
-  { label: "Neptune",  suit: "database", rank: 19 },
-  // Network (ranks 20-26)
-  { label: "VPC",      suit: "network", rank: 20 },
-  { label: "C.Front",  suit: "network", rank: 21 },
-  { label: "Route 53", suit: "network", rank: 22 },
-  { label: "API GW",   suit: "network", rank: 23 },
-  { label: "WAF",      suit: "network", rank: 24 },
-  { label: "C.Watch",  suit: "network", rank: 25 },
-  { label: "IAM",      suit: "network", rank: 26 },
-];
+import { AWS_SERVICES, JOKER_IMAGE_URL } from "./constants";
 
 export function createDeck(): Card[] {
   const cards: Card[] = [];
   for (const svc of AWS_SERVICES) {
-    cards.push({ id: `${svc.rank}-a`, suit: svc.suit, rank: svc.rank, label: svc.label });
-    cards.push({ id: `${svc.rank}-b`, suit: svc.suit, rank: svc.rank, label: svc.label });
+    cards.push({ id: `${svc.rank}-a`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
+    cards.push({ id: `${svc.rank}-b`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
   }
-  cards.push({ id: "joker", suit: "joker", rank: 0, label: "請求書" });
+  cards.push({ id: "joker", suit: "joker", rank: 0, label: "請求書", imageUrl: JOKER_IMAGE_URL });
   return cards;
 }
 

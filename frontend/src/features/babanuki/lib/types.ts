@@ -5,6 +5,7 @@ export interface Card {
   suit: Suit | "joker";
   rank: number; // 1-13, 0 for joker
   label: string; // AWSサービス名 or "請求書"
+  imageUrl: string; // AWSアイコン画像URL
 }
 
 export interface BabanukiPlayer {

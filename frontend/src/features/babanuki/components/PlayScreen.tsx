@@ -58,16 +58,29 @@ function CardFace({ card }: { card: Card }) {
       ) : (
         <>
           <span
-            className="text-[10px] font-bold leading-none absolute top-0.5 left-1"
+            className="text-[8px] font-bold leading-none absolute top-0.5 left-1"
             style={{ color }}
           >
             {card.label}
           </span>
-          <span className="text-xl leading-none" style={{ color }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={card.imageUrl}
+            alt={card.label}
+            width={30}
+            height={30}
+            className="object-contain"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+              if (fallback) fallback.style.display = "block";
+            }}
+          />
+          <span className="text-xl leading-none hidden" style={{ color }}>
             {SUIT_SYMBOLS[card.suit]}
           </span>
           <span
-            className="text-[10px] font-bold leading-none absolute bottom-0.5 right-1 rotate-180"
+            className="text-[8px] font-bold leading-none absolute bottom-0.5 right-1 rotate-180"
             style={{ color }}
           >
             {card.label}
