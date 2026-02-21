@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BabanukiPlayer, Card, ThemeSlot } from "../lib/types";
+import PlayerAvatar from "./PlayerAvatar";
 import {
   drawCard,
   cpuChooseCard,
@@ -143,7 +144,7 @@ function OpponentCharacter({
           className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg border-3
             ${isCurrentTurn ? "border-yellow-400 bg-yellow-900/40 animate-pulse" : "border-white/30 bg-black/30"}`}
         >
-          {player.avatar}
+          <PlayerAvatar src={player.avatar} name={player.name} size={56} />
         </div>
         {isCurrentTurn && !finished && (
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
@@ -591,7 +592,7 @@ export default function PlayScreen({
                           ? "bg-yellow-400/80 text-gray-900"
                           : "bg-black/40 text-white/80"}`}
                     >
-                      <span>{p.avatar}</span>
+                      <PlayerAvatar src={p.avatar} name={p.name} size={14} />
                       <span>
                         {p.finishedOrder
                           ? `${p.finishedOrder}位`
@@ -622,7 +623,7 @@ export default function PlayScreen({
               className={`w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 shadow
                 ${currentTurnIndex === 0 ? "border-yellow-400 bg-yellow-900/30" : "border-white/20 bg-black/30"}`}
             >
-              {players[0].avatar}
+              <PlayerAvatar src={players[0].avatar} name={players[0].name} size={28} />
             </div>
             <div className="text-white text-sm font-bold">
               {players[0].name}

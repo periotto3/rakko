@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { BabanukiPlayer, ThemeSlot } from "../lib/types";
+import PlayerAvatar from "./PlayerAvatar";
 import {
   THEME_WORK,
   THEME_WHEN,
@@ -197,7 +198,7 @@ export default function WaitingScreen({
       <div className="flex gap-3 mb-8">
         {players.map((p) => (
           <div key={p.id} className="flex flex-col items-center">
-            <span className="text-3xl">{p.avatar}</span>
+            <PlayerAvatar src={p.avatar} name={p.name} size={36} />
             <span className="text-xs text-gray-600 mt-1">{p.name}</span>
           </div>
         ))}

@@ -2,6 +2,7 @@
 
 import { BabanukiPlayer } from "../lib/types";
 import type { RankingData } from "../services/gameService";
+import PlayerAvatar from "./PlayerAvatar";
 
 interface ResultScreenProps {
   winner: BabanukiPlayer;
@@ -105,7 +106,7 @@ export default function ResultScreen({
                 <span className="text-2xl">
                   {hasJoker ? "💀" : medals[i] || `${i + 1}位`}
                 </span>
-                <span className="text-2xl">{player.avatar}</span>
+                <PlayerAvatar src={player.avatar} name={player.name} size={32} />
                 <span className="font-bold flex-1 text-left">
                   {player.name}
                 </span>
