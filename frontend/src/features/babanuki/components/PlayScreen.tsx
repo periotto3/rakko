@@ -147,10 +147,10 @@ function OpponentCharacter({
         className={`relative transition-all ${isCurrentTurn ? "scale-110" : ""}`}
       >
         <div
-          className={`${isVertical ? "w-14 h-14" : "w-20 h-20"} rounded-full flex items-center justify-center shadow-lg border-2
+          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg border-2
             ${isCurrentTurn ? "border-yellow-400 bg-yellow-900/40 animate-pulse" : "border-white/30 bg-black/30"}`}
         >
-          <PlayerAvatar src={player.avatar} name={player.name} size={isVertical ? 44 : 56} />
+          <PlayerAvatar src={player.avatar} name={player.name} size={48} />
         </div>
         {isCurrentTurn && !finished && (
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
@@ -641,10 +641,10 @@ export default function PlayScreen({
         <div className="absolute bottom-0 left-0 right-0 pb-4 px-4 z-10">
           <div className="flex items-center justify-center gap-3 mb-1">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 shadow
+              className={`w-16 h-16 rounded-full flex items-center justify-center border-2 shadow
                 ${currentTurnIndex === 0 ? "border-yellow-400 bg-yellow-900/30" : "border-white/20 bg-black/30"}`}
             >
-              <PlayerAvatar src={players[0].avatar} name={players[0].name} size={28} />
+              <PlayerAvatar src={players[0].avatar} name={players[0].name} size={48} />
             </div>
             <div className="text-white text-sm font-bold">
               {players[0].name}

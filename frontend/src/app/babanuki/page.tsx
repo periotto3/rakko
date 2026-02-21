@@ -54,7 +54,7 @@ export default function BabanukiPage() {
     if (mode === "cpu") {
       // CPU モード：既存の waiting 演出をそのまま使う
       const allJoiners = [
-        { id: "human", name: playerName ?? "あなた", avatar: "", isCPU: false },
+        { id: "human", name: playerName ?? "あなた", avatar: "/avatars/user.png", isCPU: false },
         { id: "cpu1", name: "Aさん", avatar: "/avatars/cpu_1.png", isCPU: true },
         { id: "cpu2", name: "Bさん", avatar: "/avatars/cpu_2.png", isCPU: true },
         { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png", isCPU: true },

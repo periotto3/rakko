@@ -118,7 +118,7 @@ export default function WaitingScreen({
   });
   const [decided, setDecided] = useState(false);
 
-  const prevPlayerCount = useRef(players.length);
+  const prevPlayerCount = useRef(0);
   useEffect(() => {
     if (players.length > prevPlayerCount.current && nextSlotIndex < SLOT_KEYS.length && !decided) {
       const slotIdx = nextSlotIndex;
