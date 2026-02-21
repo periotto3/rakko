@@ -46,7 +46,7 @@ export default function GeneratingScreen({
     }
   }, [progress, imageUrl, onComplete]);
 
-  const themeText = `${theme.who} ${theme.when} ${theme.where} ${theme.what}`;
+  const themeText = `${theme.work} / ${theme.when} / ${theme.where} / ${theme.style}`;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">

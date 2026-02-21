@@ -4,8 +4,9 @@ import { AWS_SERVICES, JOKER_IMAGE_URL } from "./constants";
 export function createDeck(): Card[] {
   const cards: Card[] = [];
   for (const svc of AWS_SERVICES) {
-    cards.push({ id: `${svc.rank}-a`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
-    cards.push({ id: `${svc.rank}-b`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
+    for (const copy of ["a", "b", "c", "d"]) {
+      cards.push({ id: `${svc.rank}-${copy}`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
+    }
   }
   cards.push({ id: "joker", suit: "joker", rank: 0, label: "請求書", imageUrl: JOKER_IMAGE_URL });
   return cards;
@@ -172,19 +173,19 @@ export function createPlayers(playerCount: number): BabanukiPlayer[] {
 }
 
 // Theme roulette data
-const THEME_WHO = ["Aさんが", "Bさんが", "Cさんが", "みんなで", "あなたが"];
-const THEME_WHEN = ["社会人のとき", "子供のとき", "夏休みに", "深夜に", "朝一で"];
-const THEME_WHERE = ["家で", "学校で", "海辺で", "宇宙で", "森の中で"];
-const THEME_WHAT = ["さみしかった話", "笑った話", "驚いた話", "冒険した話", "食べた話"];
+const THEME_WORK = ["フリーレン", "国宝", "ドラえもん", "スターウォーズ", "ハリーポッター"];
+const THEME_WHEN = ["古代", "中世", "近世", "現代", "未来"];
+const THEME_WHERE = ["日本", "東南アジア", "ヨーロッパ", "南米", "アフリカ", "宇宙"];
+const THEME_STYLE = ["アニメ", "水彩", "油絵", "スケッチ", "ドット絵", "ジブリ"];
 
 export function spinRoulette(): ThemeSlot {
   const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
   return {
-    who: pick(THEME_WHO),
+    work: pick(THEME_WORK),
     when: pick(THEME_WHEN),
     where: pick(THEME_WHERE),
-    what: pick(THEME_WHAT),
+    style: pick(THEME_STYLE),
   };
 }
 
-export { THEME_WHO, THEME_WHEN, THEME_WHERE, THEME_WHAT };
+export { THEME_WORK, THEME_WHEN, THEME_WHERE, THEME_STYLE };
