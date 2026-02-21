@@ -15,7 +15,7 @@ import type {
 interface OnlinePlayScreenProps {
   gameService: GameService;
   gameStartData: GameStartData;
-  onGameEnd: (winner: BabanukiPlayer, players: BabanukiPlayer[]) => void;
+  onGameEnd: (winner: BabanukiPlayer, players: BabanukiPlayer[], rankings: RankingData[]) => void;
 }
 
 const SUIT_SYMBOLS: Record<string, string> = {
@@ -213,7 +213,7 @@ export default function OnlinePlayScreen({ gameService, gameStartData, onGameEnd
     gameService.onGameOver((rankings) => {
       const converted = rankingsToPlayers(rankings);
       const winner = converted.find((p) => p.finishedOrder === 1) ?? converted[0];
-      onGameEnd(winner, converted);
+      onGameEnd(winner, converted, rankings);
     });
 
     gameService.onError((msg) => {

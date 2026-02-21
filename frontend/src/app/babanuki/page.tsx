@@ -16,7 +16,7 @@ import {
 import type { GameMode } from "@/features/babanuki";
 import { CpuGameService } from "@/features/babanuki/services/cpuGameService";
 import { OnlineGameService } from "@/features/babanuki/services/onlineGameService";
-import type { GameService, GameStartData } from "@/features/babanuki/services/gameService";
+import type { GameService, GameStartData, RankingData } from "@/features/babanuki/services/gameService";
 
 const MAX_PLAYERS = 4;
 
@@ -30,6 +30,7 @@ export default function BabanukiPage() {
   const [gameService, setGameService] = useState<GameService | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("cpu");
   const [gameStartData, setGameStartData] = useState<GameStartData | null>(null);
+  const [rankings, setRankings] = useState<RankingData[] | null>(null);
   const cpuJoinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Cleanup timers on unmount
@@ -93,9 +94,10 @@ export default function BabanukiPage() {
   }, []);
 
   const handleGameEnd = useCallback(
-    (gameWinner: BabanukiPlayer, endPlayers: BabanukiPlayer[]) => {
+    (gameWinner: BabanukiPlayer, endPlayers: BabanukiPlayer[], gameRankings?: RankingData[]) => {
       setWinner(gameWinner);
       setFinalPlayers(endPlayers);
+      if (gameRankings) setRankings(gameRankings);
       setPhase("result");
     },
     []
@@ -112,6 +114,7 @@ export default function BabanukiPage() {
     setFinalPlayers([]);
     setBackgroundImage("");
     setGameStartData(null);
+    setRankings(null);
     setPhase("title");
   }, [gameService]);
 
@@ -163,6 +166,7 @@ export default function BabanukiPage() {
         <ResultScreen
           winner={winner!}
           players={finalPlayers}
+          rankings={rankings ?? undefined}
           onRematch={handleRematch}
         />
       );
