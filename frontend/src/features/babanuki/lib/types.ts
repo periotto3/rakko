@@ -25,9 +25,10 @@ export type GamePhase =
   | "result";
 
 export interface ThemeSlot {
-  era: string;       // 時代
-  worldview: string; // 世界観
-  place: string;     // 場所
+  work: string;  // 作品
+  when: string;  // いつ
+  where: string; // どこで
+  style: string; // 画風
 }
 
 export interface BabanukiState {

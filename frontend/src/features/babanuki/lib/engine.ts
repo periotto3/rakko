@@ -172,17 +172,19 @@ export function createPlayers(playerCount: number): BabanukiPlayer[] {
 }
 
 // Theme roulette data
-const THEME_ERA = ["先史時代", "古代", "中世", "近世", "近代", "現代"];
-const THEME_WORLDVIEW = ["ファンタジー", "SF", "ホラー", "ミステリー", "戦記", "冒険"];
-const THEME_PLACE = ["王城", "密林", "海底", "砂漠", "火山島", "雪山"];
+const THEME_WORK = ["フリーレン", "国宝", "ドラえもん", "スターウォーズ", "ハリーポッター"];
+const THEME_WHEN = ["古代", "中世", "近世", "現代", "未来"];
+const THEME_WHERE = ["日本", "東南アジア", "ヨーロッパ", "南米", "アフリカ", "宇宙"];
+const THEME_STYLE = ["アニメ", "水彩", "油絵", "スケッチ", "ドット絵", "ジブリ"];
 
 export function spinRoulette(): ThemeSlot {
   const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
   return {
-    era: pick(THEME_ERA),
-    worldview: pick(THEME_WORLDVIEW),
-    place: pick(THEME_PLACE),
+    work: pick(THEME_WORK),
+    when: pick(THEME_WHEN),
+    where: pick(THEME_WHERE),
+    style: pick(THEME_STYLE),
   };
 }
 
-export { THEME_ERA, THEME_WORLDVIEW, THEME_PLACE };
+export { THEME_WORK, THEME_WHEN, THEME_WHERE, THEME_STYLE };
