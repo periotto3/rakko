@@ -80,9 +80,8 @@ export class DrawCardUseCase {
       let players = updatedGame.players;
       let finishedCount = updatedGame.finishedCount;
 
-      const remaining = players
-        .filter(p => p.finishedOrder === null)
-        .sort((a, b) => a.hand.length - b.hand.length);
+      // Assign finishedOrder to the last remaining player (joker holder = loser)
+      const remaining = players.filter(p => p.finishedOrder === null);
       for (const p of remaining) {
         finishedCount++;
         const idx = players.findIndex(pl => pl.seatIndex === p.seatIndex);

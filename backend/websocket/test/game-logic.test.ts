@@ -41,17 +41,17 @@ function makePlayer(
 }
 
 describe("createDeck", () => {
-  it("should generate 53 cards (52 + joker)", () => {
+  it("should generate 25 cards (6 ranks × 4 suits + joker)", () => {
     const deck = createDeck();
-    expect(deck).toHaveLength(53);
+    expect(deck).toHaveLength(25);
   });
 
-  it("should have 13 cards per suit", () => {
+  it("should have 6 cards per suit", () => {
     const deck = createDeck();
     const suits = ["spades", "hearts", "diamonds", "clubs"];
     for (const suit of suits) {
       const suitCards = deck.filter((c) => c.suit === suit);
-      expect(suitCards).toHaveLength(13);
+      expect(suitCards).toHaveLength(6);
     }
   });
 
@@ -66,15 +66,29 @@ describe("createDeck", () => {
   it("should have unique IDs for all cards", () => {
     const deck = createDeck();
     const ids = new Set(deck.map((c) => c.id));
-    expect(ids.size).toBe(53);
+    expect(ids.size).toBe(25);
   });
 
-  it("should have correct labels", () => {
+  it("should use the same 6 ranks across all suits", () => {
     const deck = createDeck();
-    const ace = deck.find((c) => c.suit === "spades" && c.rank === 1);
-    expect(ace?.label).toBe("A");
-    const king = deck.find((c) => c.suit === "hearts" && c.rank === 13);
-    expect(king?.label).toBe("K");
+    const suits = ["spades", "hearts", "diamonds", "clubs"];
+    const ranksBySuit = suits.map(
+      (suit) => new Set(deck.filter((c) => c.suit === suit).map((c) => c.rank))
+    );
+    // All suits should have the same set of ranks
+    for (const ranks of ranksBySuit) {
+      expect(ranks).toEqual(ranksBySuit[0]);
+    }
+  });
+
+  it("should select ranks from 1-13", () => {
+    const deck = createDeck();
+    const ranks = new Set(deck.filter((c) => c.suit !== "joker").map((c) => c.rank));
+    expect(ranks.size).toBe(6);
+    for (const rank of ranks) {
+      expect(rank).toBeGreaterThanOrEqual(1);
+      expect(rank).toBeLessThanOrEqual(13);
+    }
   });
 });
 
@@ -403,17 +417,37 @@ describe("getActivePlayers", () => {
 });
 
 describe("isGameOver", () => {
-  it("should return true when at least one player has finished", () => {
+  it("should return true when only one player has cards (last player = loser)", () => {
+    const players = [
+      makePlayer(0, [], { finishedOrder: 1 }),
+      makePlayer(1, [], { finishedOrder: 2 }),
+      makePlayer(2, [], { finishedOrder: 3 }),
+      makePlayer(3, [card("joker", 0, "joker")]),
+    ];
+    expect(isGameOver(players)).toBe(true);
+  });
+
+  it("should return true when no players have cards", () => {
+    const players = [
+      makePlayer(0, [], { finishedOrder: 1 }),
+      makePlayer(1, [], { finishedOrder: 2 }),
+      makePlayer(2, [], { finishedOrder: 3 }),
+      makePlayer(3, [], { finishedOrder: 4 }),
+    ];
+    expect(isGameOver(players)).toBe(true);
+  });
+
+  it("should return false when multiple players still have cards", () => {
     const players = [
       makePlayer(0, [card("spades", 1)]),
       makePlayer(1, [], { finishedOrder: 1 }),
       makePlayer(2, [card("diamonds", 3)]),
       makePlayer(3, [card("joker", 0, "joker")]),
     ];
-    expect(isGameOver(players)).toBe(true);
+    expect(isGameOver(players)).toBe(false);
   });
 
-  it("should return false when no player has finished", () => {
+  it("should return false when all players still have cards", () => {
     const players = [
       makePlayer(0, [card("spades", 1)]),
       makePlayer(1, [card("hearts", 2)]),

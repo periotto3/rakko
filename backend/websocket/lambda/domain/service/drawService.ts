@@ -96,7 +96,8 @@ export function getActivePlayers(players: Player[]): number {
 }
 
 export function isGameOver(players: Player[]): boolean {
-  return players.some(p => p.finishedOrder !== null);
+  const activePlayers = players.filter(p => p.hand.length > 0).length;
+  return activePlayers <= 1;
 }
 
 export function getRankings(players: Player[]): Ranking[] {
