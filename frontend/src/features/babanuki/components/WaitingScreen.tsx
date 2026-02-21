@@ -21,6 +21,7 @@ interface WaitingScreenProps {
   onThemeDecided: (theme: ThemeSlot) => void;
   // オンラインモード専用
   onGameStart: (data: GameStartData) => void;
+  playerName?: string;
 }
 
 const SLOT_KEYS: (keyof ThemeSlot)[] = ["work", "when", "where", "style"];
@@ -98,6 +99,7 @@ export default function WaitingScreen({
   maxPlayers,
   onThemeDecided,
   onGameStart,
+  playerName,
 }: WaitingScreenProps) {
   // オンラインモード用：待機人数
   const [waitingCount, setWaitingCount] = useState(1);
@@ -148,6 +150,11 @@ export default function WaitingScreen({
   // オンラインモード：シンプルな待機画面
   if (mode === "online") {
     const AVATARS = ["😊", "🐱", "🐶", "🐰"];
+    const getLabel = (i: number) => {
+      if (i >= waitingCount) return "待機中";
+      if (i === 0) return playerName ?? "あなた";
+      return "参加中";
+    };
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
         <h1 className="text-3xl font-bold mb-2">
@@ -162,7 +169,7 @@ export default function WaitingScreen({
                 {AVATARS[i]}
               </span>
               <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
-                {i < waitingCount ? "参加済" : "待機中"}
+                {getLabel(i)}
               </span>
             </div>
           ))}

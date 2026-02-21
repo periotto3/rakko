@@ -29,6 +29,7 @@ export default function BabanukiPage() {
   const [backgroundImage, setBackgroundImage] = useState<string>("");
   const [gameService, setGameService] = useState<GameService | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("cpu");
+  const [currentPlayerName, setCurrentPlayerName] = useState<string>("");
   const [gameStartData, setGameStartData] = useState<GameStartData | null>(null);
   const [rankings, setRankings] = useState<RankingData[] | null>(null);
   const cpuJoinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -48,6 +49,7 @@ export default function BabanukiPage() {
     setGameService(service);
     setGameMode(mode);
 
+    setCurrentPlayerName(playerName ?? "プレイヤー");
     setPlayers([]);
     setPhase("waiting");
 
@@ -131,6 +133,7 @@ export default function BabanukiPage() {
           maxPlayers={MAX_PLAYERS}
           onThemeDecided={handleThemeDecided}
           onGameStart={handleOnlineGameStart}
+          playerName={currentPlayerName}
         />
       );
 
