@@ -99,10 +99,16 @@ export async function handleDrawCard(
   if (isGameOver(game.players)) {
     game.phase = "finished";
 
-    // 残りプレイヤーにカード枚数順でランク付与（少ない方が上位）
+    // 残りプレイヤーにランク付与: Joker持ちを最下位、それ以外は手札枚数が少ない順
     const remaining = game.players
       .filter(p => p.finishedOrder === null)
-      .sort((a, b) => a.hand.length - b.hand.length);
+      .sort((a, b) => {
+        const aHasJoker = a.hand.some(c => c.id === "joker");
+        const bHasJoker = b.hand.some(c => c.id === "joker");
+        if (aHasJoker && !bHasJoker) return 1;
+        if (!aHasJoker && bHasJoker) return -1;
+        return a.hand.length - b.hand.length;
+      });
     for (const p of remaining) {
       game.finishedCount++;
       p.finishedOrder = game.finishedCount;
