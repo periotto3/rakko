@@ -1,0 +1,7 @@
+package/
+.venv/
+venv/
+env/
+
+lambda.zip
+requirements.txt
