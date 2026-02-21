@@ -2,6 +2,59 @@ import { ImageGenerationService } from "../../domain/model/imageGeneration/image
 
 const TIMEOUT_MS = 70_000;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Image API returned non-JSON response");
+  }
+}
+
+function unwrapLambdaUrlResponse(data: unknown): unknown {
+  if (!isRecord(data) || !("body" in data)) {
+    return data;
+  }
+
+  const statusCode = Number(data.statusCode);
+  const body = data.body;
+
+  if (!Number.isNaN(statusCode) && statusCode >= 400) {
+    const details = typeof body === "string" ? body : JSON.stringify(body);
+    throw new Error(`Image API returned ${statusCode}: ${details}`);
+  }
+
+  if (typeof body === "string") {
+    return parseJson(body);
+  }
+  return body;
+}
+
+function extractImageUrls(data: unknown): string[] {
+  if (!isRecord(data)) {
+    return [];
+  }
+
+  if (Array.isArray(data.urls)) {
+    return data.urls.filter((url): url is string => typeof url === "string");
+  }
+
+  if (Array.isArray(data.imageUrls)) {
+    return data.imageUrls.filter((url): url is string => typeof url === "string");
+  }
+
+  if (Array.isArray(data.images)) {
+    return data.images
+      .map((item) => (isRecord(item) && typeof item.url === "string" ? item.url : null))
+      .filter((url): url is string => url !== null);
+  }
+
+  return [];
+}
+
 export class HttpImageGenerationService implements ImageGenerationService {
   constructor(private readonly apiUrl: string) {}
 
@@ -22,8 +75,13 @@ export class HttpImageGenerationService implements ImageGenerationService {
       }
 
       const text = await response.text();
-      const data = JSON.parse(text);
-      return data.urls ?? data.imageUrls ?? [];
+      const data = parseJson(text);
+      const payload = unwrapLambdaUrlResponse(data);
+      const urls = extractImageUrls(payload);
+      if (urls.length === 0) {
+        throw new Error("Image API response did not include image URLs");
+      }
+      return urls;
     } finally {
       clearTimeout(timer);
     }

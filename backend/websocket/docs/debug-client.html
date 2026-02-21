@@ -101,6 +101,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
   .image-gallery img { width: 100%; border-radius: 4px; border: 1px solid #0f3460; }
+  .image-gallery .error { width: 100%; padding: 12px; border-radius: 4px; border: 1px solid #e94560; background: #2c1a1a; color: #e94560; font-size: 12px; text-align: center; }
 </style>
 </head>
 <body>
@@ -313,20 +314,32 @@ class PlayerPanel {
         this.updateStatus('Generating images...', 'waiting');
         break;
 
-      case 'images_ready':
+      case 'images_ready': {
         this.generatingArea.style.display = '';
         this.generatingArea.innerHTML = '';
-        const gallery = document.createElement('div');
-        gallery.className = 'image-gallery';
-        (msg.imageUrls || []).forEach(url => {
-          const img = document.createElement('img');
-          img.src = url;
-          img.alt = 'Generated image';
-          gallery.appendChild(img);
-        });
-        this.generatingArea.appendChild(gallery);
+        const urls = msg.imageUrls || [];
+        if (urls.length === 0) {
+          this.generatingArea.innerHTML = '<div style="padding:8px;color:#e94560;font-size:13px;">画像の生成に失敗しました</div>';
+        } else {
+          const gallery = document.createElement('div');
+          gallery.className = 'image-gallery';
+          urls.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Generated image';
+            img.onerror = function() {
+              const err = document.createElement('div');
+              err.className = 'error';
+              err.textContent = '⚠ Load failed';
+              this.replaceWith(err);
+            };
+            gallery.appendChild(img);
+          });
+          this.generatingArea.appendChild(gallery);
+        }
         this.updateStatus('Images ready', 'playing');
         break;
+      }
 
       case 'error':
         this.log(`ERROR: ${msg.message}`, 'error');
