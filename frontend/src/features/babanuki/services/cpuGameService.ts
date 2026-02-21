@@ -124,13 +124,19 @@ export class CpuGameService implements GameService {
 
     const afterDraw = () => {
       if (isGameOver(this.players)) {
-        // 残ったプレイヤーに最下位を付与してゲーム終了
-        this.players = this.players.map((p) => {
-          if (p.hand.length > 0 && p.finishedOrder === null) {
-            return { ...p, finishedOrder: this.finishedCount + 1 };
-          }
-          return p;
+        // 残プレイヤーにランク付与: 手札少ない順、Joker持ちは最後
+        const remaining = this.players.filter(p => p.hand.length > 0 && p.finishedOrder === null);
+        remaining.sort((a, b) => {
+          const aJoker = a.hand.some(c => c.suit === "joker");
+          const bJoker = b.hand.some(c => c.suit === "joker");
+          if (aJoker !== bJoker) return aJoker ? 1 : -1;
+          return a.hand.length - b.hand.length;
         });
+        let nextRank = this.finishedCount + 1;
+        const rankMap = new Map(remaining.map(p => [p.id, nextRank++]));
+        this.players = this.players.map(p =>
+          rankMap.has(p.id) ? { ...p, finishedOrder: rankMap.get(p.id)! } : p
+        );
         this.isRunning = false;
         this.gameOverCb?.(this.buildRankings());
         return;
