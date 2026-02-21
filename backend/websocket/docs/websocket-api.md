@@ -50,6 +50,7 @@ wss://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev
 {
   "type": "waiting",
   "waitingCount": 2,
+  "playerNames": ["たろう", "じろう"],
   "decidedSlots": [
     { "key": "who", "value": "みんなで", "slotIndex": 0 }
   ],
@@ -66,13 +67,37 @@ wss://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev
 | フィールド       | 型                          | 説明                                              |
 | ---------------- | --------------------------- | ------------------------------------------------- |
 | `waitingCount`   | number                      | 現在の待機人数 (1〜4)                              |
+| `playerNames`    | string[]                    | 現在待機中のプレイヤー名一覧                       |
 | `decidedSlots`   | RouletteSlot[]              | 確定済みのルーレットスロット一覧                    |
 | `newSlot`        | RouletteSlot \| null        | 今回新たに確定したスロット (なければ `null`)         |
 | `slotCandidates` | Record\<string, string[]\>  | 各カテゴリの候補一覧 (ルーレット演出用)             |
 
+### `generating` — 画像生成中
+
+4人揃った後、画像生成の開始時に全プレイヤーに送信される。
+
+```json
+{ "type": "generating" }
+```
+
+### `images_ready` — 画像生成完了
+
+画像生成が完了した時に全プレイヤーに送信される。
+
+```json
+{
+  "type": "images_ready",
+  "imageUrls": ["https://...", "https://..."]
+}
+```
+
+| フィールド   | 型       | 説明                      |
+| ------------ | -------- | ------------------------- |
+| `imageUrls`  | string[] | 生成された画像のURL一覧    |
+
 ### `game_start` — ゲーム開始
 
-4人揃った時点で各プレイヤーに個別送信される。
+画像生成完了後、各プレイヤーに個別送信される。
 
 ```json
 {
@@ -176,6 +201,22 @@ wss://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev
 | `"No valid target to draw from"`                    | 引ける相手がいない            |
 | `"Invalid card index. Target has N cards (0-N-1)"`  | cardIndex が範囲外            |
 | `"Unknown action"`                                  | 不明なアクション              |
+| `"ゲームの作成に失敗しました。再度マッチングを行います。"` | 画像生成失敗時 (プレイヤーはキューに戻される) |
+
+---
+
+## ゲームフロー（マッチング〜開始）
+
+4人のプレイヤーが揃ってからゲーム開始までの流れ：
+
+```
+1. waiting (waitingCount: 4)   — 4人目が参加、全員に通知
+2. generating                  — 画像生成開始を通知
+3. images_ready                — 画像生成完了、URLを配信
+4. game_start                  — ゲーム開始、手札を配布
+```
+
+画像生成に失敗した場合は `error` メッセージが送信され、プレイヤーはマッチングキューに戻される。
 
 ---
 
