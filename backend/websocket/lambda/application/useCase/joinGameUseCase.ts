@@ -18,6 +18,7 @@ import {
 } from "../../domain/model/matchmaking/themeData.js";
 
 const AVATARS = ["😊", "🐱", "🐶", "🐰"];
+const PROMPT_LOG_LIMIT = 180;
 
 export class JoinGameUseCase {
   constructor(
@@ -86,11 +87,39 @@ export class JoinGameUseCase {
     const gameId = randomUUID();
 
     let imageUrls: string[] = [];
+    const prompt = buildPrompt(slots);
+    const promptPreview =
+      prompt.length > PROMPT_LOG_LIMIT
+        ? `${prompt.slice(0, PROMPT_LOG_LIMIT)}...`
+        : prompt;
+
+    console.info(
+      JSON.stringify({
+        event: "image_generation_start",
+        gameId,
+        promptLength: prompt.length,
+        promptPreview,
+      })
+    );
+
     try {
-      const prompt = buildPrompt(slots);
       imageUrls = await this.imageGenerationService.generate(prompt, gameId);
+      console.info(
+        JSON.stringify({
+          event: "image_generation_done",
+          gameId,
+          imageUrlCount: imageUrls.length,
+        })
+      );
     } catch (err) {
-      console.error("Image generation failed, continuing without images:", err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error(
+        JSON.stringify({
+          event: "image_generation_failed",
+          gameId,
+          errorMessage,
+        })
+      );
     }
 
     await Promise.all(

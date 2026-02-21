@@ -61,6 +61,16 @@ export class HttpImageGenerationService implements ImageGenerationService {
   async generate(prompt: string, roomId: string): Promise<string[]> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const startedAt = Date.now();
+
+    console.info(
+      JSON.stringify({
+        event: "image_api_request_start",
+        roomId,
+        timeoutMs: TIMEOUT_MS,
+        promptLength: prompt.length,
+      })
+    );
 
     try {
       const response = await fetch(this.apiUrl, {
@@ -69,6 +79,15 @@ export class HttpImageGenerationService implements ImageGenerationService {
         body: JSON.stringify({ prompt, roomId }),
         signal: controller.signal,
       });
+
+      console.info(
+        JSON.stringify({
+          event: "image_api_http_response",
+          roomId,
+          status: response.status,
+          elapsedMs: Date.now() - startedAt,
+        })
+      );
 
       if (!response.ok) {
         throw new Error(`Image API returned ${response.status}`);
@@ -81,7 +100,31 @@ export class HttpImageGenerationService implements ImageGenerationService {
       if (urls.length === 0) {
         throw new Error("Image API response did not include image URLs");
       }
+      console.info(
+        JSON.stringify({
+          event: "image_api_request_success",
+          roomId,
+          urlCount: urls.length,
+          elapsedMs: Date.now() - startedAt,
+        })
+      );
       return urls;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === "AbortError" || errorMessage.toLowerCase().includes("aborted"));
+      console.error(
+        JSON.stringify({
+          event: "image_api_request_failed",
+          roomId,
+          elapsedMs: Date.now() - startedAt,
+          isTimeout,
+          errorMessage,
+          endpoint: this.apiUrl,
+        })
+      );
+      throw err;
     } finally {
       clearTimeout(timer);
     }
