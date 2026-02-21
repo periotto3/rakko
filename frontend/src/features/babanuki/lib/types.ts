@@ -1,4 +1,4 @@
-export type Suit = "compute" | "storage" | "database" | "network";
+export type Suit = "compute" | "storage" | "database" | "network" | "frontend" | "management";
 
 export interface Card {
   id: string;
