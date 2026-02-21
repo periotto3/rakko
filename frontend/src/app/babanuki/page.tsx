@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import {
   BabanukiPlayer,
   ThemeSlot,
@@ -8,17 +8,22 @@ import {
   TitleScreen,
   WaitingScreen,
   GeneratingScreen,
-  PlayScreen,
-  OnlinePlayScreen,
   ResultScreen,
-  dealCards,
 } from "@/features/babanuki";
+import { GamePlayScreen } from "@/features/babanuki";
 import type { GameMode } from "@/features/babanuki";
 import { CpuGameService } from "@/features/babanuki/services/cpuGameService";
 import { OnlineGameService } from "@/features/babanuki/services/onlineGameService";
 import type { GameService, GameStartData, RankingData } from "@/features/babanuki/services/gameService";
 
 const MAX_PLAYERS = 4;
+
+const CPU_PLAYERS_DISPLAY = [
+  { id: "human", name: "あなた", avatar: "/avatars/user.png", isCPU: false },
+  { id: "cpu1", name: "Aさん", avatar: "/avatars/cpu_1.png", isCPU: true },
+  { id: "cpu2", name: "Bさん", avatar: "/avatars/cpu_2.png", isCPU: true },
+  { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png", isCPU: true },
+];
 
 export default function BabanukiPage() {
   const [phase, setPhase] = useState<GamePhase>("title");
@@ -31,47 +36,36 @@ export default function BabanukiPage() {
   const [gameMode, setGameMode] = useState<GameMode>("cpu");
   const [gameStartData, setGameStartData] = useState<GameStartData | null>(null);
   const [rankings, setRankings] = useState<RankingData[] | null>(null);
-  const cpuJoinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      cpuJoinTimers.current.forEach(clearTimeout);
-    };
-  }, []);
 
   const handleStart = useCallback((mode: GameMode, playerName?: string) => {
-    // 既存の gameService があれば破棄
     gameService?.dispose();
 
-    const service = mode === "online" ? new OnlineGameService() : new CpuGameService();
+    const service: GameService = mode === "online" ? new OnlineGameService() : new CpuGameService();
     setGameService(service);
     setGameMode(mode);
-
     setPlayers([]);
     setPhase("waiting");
 
+    // onGameStart は両モード共通: gameStartData を保存してゲーム画面へ
+    service.onGameStart((data) => {
+      setGameStartData(data);
+      setPhase("playing");
+    });
+
     if (mode === "cpu") {
-      // CPU モード：既存の waiting 演出をそのまま使う
-      const allJoiners = [
-        { id: "human", name: playerName ?? "あなた", avatar: "/avatars/user.png", isCPU: false },
-        { id: "cpu1", name: "Aさん", avatar: "/avatars/cpu_1.png", isCPU: true },
-        { id: "cpu2", name: "Bさん", avatar: "/avatars/cpu_2.png", isCPU: true },
-        { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png", isCPU: true },
+      // CPU: onWaiting でプレイヤーを1人ずつ追加（WaitingScreen + テーマルーレット用）
+      const allDisplayPlayers = [
+        { ...CPU_PLAYERS_DISPLAY[0], name: playerName ?? "あなた" },
+        ...CPU_PLAYERS_DISPLAY.slice(1),
       ];
-      allJoiners.forEach((p, i) => {
-        const timer = setTimeout(() => {
-          setPlayers((prev) => {
-            if (prev.find((existing) => existing.id === p.id)) return prev;
-            return [...prev, { ...p, hand: [], finishedOrder: null }];
-          });
-        }, 500 + i * 2500);
-        cpuJoinTimers.current.push(timer);
+      service.onWaiting((count) => {
+        setPlayers(
+          allDisplayPlayers.slice(0, count).map((p) => ({ ...p, hand: [], finishedOrder: null }))
+        );
       });
-    } else {
-      // オンラインモード：GameService 経由でマッチング（Phase 3 で WaitingScreen と接続予定）
-      service.join(playerName ?? "プレイヤー");
     }
+
+    service.join(playerName ?? "プレイヤー");
   }, [gameService]);
 
   const handleThemeDecided = useCallback((decidedTheme: ThemeSlot) => {
@@ -79,19 +73,11 @@ export default function BabanukiPage() {
     setPhase("generating");
   }, []);
 
-  // オンラインモード：game_start 受信時（WaitingScreen から呼ばれる）
-  const handleOnlineGameStart = useCallback((data: GameStartData) => {
-    setGameStartData(data);
-    // オンラインはテーマルーレット・画像生成をスキップして直接 playing へ
-    setTheme({ work: "", when: "", where: "", style: "" });
-    setPhase("playing");
-  }, []);
-
   const handleGenerationComplete = useCallback((imageUrl: string) => {
     setBackgroundImage(imageUrl);
-    setPlayers((prev) => dealCards(prev));
-    setPhase("playing");
-  }, []);
+    // CPU モード: startGame() でカード配布 + onGameStart 発火 → phase="playing"
+    gameService?.startGame();
+  }, [gameService]);
 
   const handleGameEnd = useCallback(
     (gameWinner: BabanukiPlayer, endPlayers: BabanukiPlayer[], gameRankings?: RankingData[]) => {
@@ -106,8 +92,6 @@ export default function BabanukiPage() {
   const handleRematch = useCallback(() => {
     gameService?.dispose();
     setGameService(null);
-    cpuJoinTimers.current.forEach(clearTimeout);
-    cpuJoinTimers.current = [];
     setPlayers([]);
     setTheme(null);
     setWinner(null);
@@ -142,21 +126,12 @@ export default function BabanukiPage() {
       );
 
     case "playing":
-      if (gameMode === "online" && gameStartData) {
-        return (
-          <OnlinePlayScreen
-            gameService={gameService!}
-            gameStartData={gameStartData}
-            onGameEnd={handleGameEnd}
-          />
-        );
-      }
       return (
-        <PlayScreen
-          initialPlayers={players}
-          theme={theme!}
-          onGameEnd={handleGameEnd}
+        <GamePlayScreen
+          gameService={gameService!}
+          gameStartData={gameStartData!}
           backgroundImage={backgroundImage || undefined}
+          onGameEnd={handleGameEnd}
         />
       );
 
@@ -171,3 +146,4 @@ export default function BabanukiPage() {
       );
   }
 }
+
