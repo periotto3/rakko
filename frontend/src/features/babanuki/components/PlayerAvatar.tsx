@@ -34,7 +34,7 @@ function SvgFallback({ color, size }: { color: string; size: number }) {
 export default function PlayerAvatar({ src, name, size = 40, className }: PlayerAvatarProps) {
   const [error, setError] = useState(false);
 
-  if (error) {
+  if (!src || error) {
     return (
       <SvgFallback
         color={FALLBACK_COLORS[src] ?? "#888888"}
@@ -52,6 +52,7 @@ export default function PlayerAvatar({ src, name, size = 40, className }: Player
       className={className}
       style={{ objectFit: "contain" }}
       onError={() => setError(true)}
+      unoptimized
     />
   );
 }

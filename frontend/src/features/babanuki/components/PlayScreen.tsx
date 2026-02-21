@@ -94,16 +94,18 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
 function CardBack({
   onClick,
   highlighted,
+  small,
 }: {
   onClick?: () => void;
   highlighted?: boolean;
+  small?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
-      className={`w-[52px] h-[74px] rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0 transition-transform duration-150
-        ${onClick ? "cursor-pointer hover:scale-110 hover:-translate-y-2" : "cursor-default"}
+      className={`${small ? "w-[22px] h-[30px]" : "w-[52px] h-[74px]"} rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0 transition-transform duration-150
+        ${onClick ? "cursor-pointer hover:scale-110 hover:-translate-y-1" : "cursor-default"}
         ${highlighted ? "border-yellow-400 ring-2 ring-yellow-300" : "border-blue-900"}
       `}
       style={{
@@ -112,9 +114,11 @@ function CardBack({
           : "linear-gradient(135deg, #1e3a5f, #1e40af)",
       }}
     >
-      <div className="w-[38px] h-[58px] rounded border border-white/20 flex items-center justify-center">
-        <span className="text-white/60 text-lg">☁</span>
-      </div>
+      {!small && (
+        <div className="w-[38px] h-[58px] rounded border border-white/20 flex items-center justify-center">
+          <span className="text-white/60 text-lg">☁</span>
+        </div>
+      )}
     </button>
   );
 }
@@ -126,6 +130,7 @@ function OpponentCharacter({
   isCurrentTurn,
   isTarget,
   onCardClick,
+  position,
 }: {
   player: BabanukiPlayer;
   isCurrentTurn: boolean;
@@ -134,6 +139,7 @@ function OpponentCharacter({
   position: "left" | "top" | "right";
 }) {
   const finished = player.hand.length === 0;
+  const isVertical = position === "left" || position === "right";
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -141,19 +147,19 @@ function OpponentCharacter({
         className={`relative transition-all ${isCurrentTurn ? "scale-110" : ""}`}
       >
         <div
-          className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg border-3
+          className={`${isVertical ? "w-14 h-14" : "w-20 h-20"} rounded-full flex items-center justify-center shadow-lg border-2
             ${isCurrentTurn ? "border-yellow-400 bg-yellow-900/40 animate-pulse" : "border-white/30 bg-black/30"}`}
         >
-          <PlayerAvatar src={player.avatar} name={player.name} size={56} />
+          <PlayerAvatar src={player.avatar} name={player.name} size={isVertical ? 44 : 56} />
         </div>
         {isCurrentTurn && !finished && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
-            <span className="text-[8px] font-bold">&#x25B6;</span>
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
+            <span className="text-[7px] font-bold">&#x25B6;</span>
           </div>
         )}
       </div>
 
-      <div className="bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-center min-w-[90px] border border-white/10">
+      <div className="bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-center border border-white/10">
         <div className="text-white text-xs font-bold">{player.name}</div>
         <div className="text-[10px] text-gray-300">
           {finished ? (
@@ -165,17 +171,29 @@ function OpponentCharacter({
       </div>
 
       {!finished && (
-        <div className="flex gap-1 flex-wrap justify-center">
-          {player.hand.map((_, i) => (
-            <CardBack
-              key={i}
-              highlighted={isTarget}
-              onClick={
-                isTarget && onCardClick ? () => onCardClick(i) : undefined
-              }
-            />
-          ))}
-        </div>
+        isVertical ? (
+          <div className="flex flex-col gap-0.5">
+            {player.hand.map((_, i) => (
+              <CardBack
+                key={i}
+                small
+                highlighted={isTarget}
+                onClick={isTarget && onCardClick ? () => onCardClick(i) : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-row gap-0.5">
+            {player.hand.map((_, i) => (
+              <CardBack
+                key={i}
+                small
+                highlighted={isTarget}
+                onClick={isTarget && onCardClick ? () => onCardClick(i) : undefined}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   );
@@ -492,28 +510,10 @@ export default function PlayScreen({
       </div>
 
       {/* Game area */}
-      <div className="relative z-10 flex-1 flex flex-col">
-        {/* Opponents row */}
-        <div className="flex justify-around items-start px-4 pt-3 pb-1">
-          {/* Left character (index 3) */}
-          {players[3] && (
-            <OpponentCharacter
-              player={players[3]}
-              isCurrentTurn={currentTurnIndex === 3}
-              isTarget={targetIndex === 3 && !players[currentTurnIndex].isCPU}
-              onCardClick={
-                targetIndex === 3 &&
-                !players[currentTurnIndex].isCPU &&
-                !isProcessing
-                  ? handlePlayerDraw
-                  : undefined
-              }
-              position="left"
-            />
-          )}
-
-          {/* Top character (index 2) */}
-          {players[2] && (
+      <div className="relative z-10 flex-1 overflow-hidden">
+        {/* Top - players[2] */}
+        {players[2] && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
             <OpponentCharacter
               player={players[2]}
               isCurrentTurn={currentTurnIndex === 2}
@@ -527,10 +527,31 @@ export default function PlayScreen({
               }
               position="top"
             />
-          )}
+          </div>
+        )}
 
-          {/* Right character (index 1) */}
-          {players[1] && (
+        {/* Left - players[3] */}
+        {players[3] && (
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
+            <OpponentCharacter
+              player={players[3]}
+              isCurrentTurn={currentTurnIndex === 3}
+              isTarget={targetIndex === 3 && !players[currentTurnIndex].isCPU}
+              onCardClick={
+                targetIndex === 3 &&
+                !players[currentTurnIndex].isCPU &&
+                !isProcessing
+                  ? handlePlayerDraw
+                  : undefined
+              }
+              position="left"
+            />
+          </div>
+        )}
+
+        {/* Right - players[1] */}
+        {players[1] && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
             <OpponentCharacter
               player={players[1]}
               isCurrentTurn={currentTurnIndex === 1}
@@ -544,15 +565,15 @@ export default function PlayScreen({
               }
               position="right"
             />
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Table area */}
-        <div className="flex-1 flex items-center justify-center px-4">
+        {/* Center - table */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            className="relative w-full max-w-2xl rounded-[40px] border-4 border-yellow-900/60 shadow-2xl overflow-hidden"
+            className="relative w-[320px] rounded-[40px] border-4 border-yellow-900/60 shadow-2xl overflow-hidden pointer-events-auto"
             style={{
-              height: "180px",
+              height: "160px",
               background:
                 "linear-gradient(180deg, #8B6914 0%, #A67C00 30%, #C4952A 50%, #A67C00 70%, #8B6914 100%)",
               boxShadow:
@@ -616,8 +637,8 @@ export default function PlayScreen({
           </div>
         </div>
 
-        {/* Player area at bottom */}
-        <div className="pb-4 px-4">
+        {/* Bottom - players[0] */}
+        <div className="absolute bottom-0 left-0 right-0 pb-4 px-4 z-10">
           <div className="flex items-center justify-center gap-3 mb-1">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 shadow
