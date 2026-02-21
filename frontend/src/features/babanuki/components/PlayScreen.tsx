@@ -23,6 +23,8 @@ const SUIT_SYMBOLS: Record<string, string> = {
   storage: "🪣",
   database: "🗄️",
   network: "🌐",
+  frontend: "🖥️",
+  management: "🛠️",
   joker: "💸",
 };
 
@@ -31,6 +33,8 @@ const SUIT_COLORS: Record<string, string> = {
   storage: "#7AA116",  // グリーン
   database: "#2E73B8", // ブルー
   network: "#8C4FFF",  // パープル
+  frontend: "#F59E42", // オレンジ
+  management: "#6B7280", // グレー
   joker: "#7c3aed",
 };
 
