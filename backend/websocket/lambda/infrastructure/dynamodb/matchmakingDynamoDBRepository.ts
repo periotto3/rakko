@@ -48,6 +48,7 @@ export class MatchmakingDynamoDBRepository implements MatchmakingRepository {
         TableName: this.ctx.tableName,
         KeyConditionExpression: "PK = :pk AND begins_with(SK, :conn)",
         ExpressionAttributeValues: { ":pk": "MATCHMAKING", ":conn": "CONN#" },
+        ConsistentRead: true,
       })
     );
     return (result.Items ?? []).map(
@@ -60,6 +61,7 @@ export class MatchmakingDynamoDBRepository implements MatchmakingRepository {
       new GetCommand({
         TableName: this.ctx.tableName,
         Key: { PK: "MATCHMAKING", SK: "ROULETTE" },
+        ConsistentRead: true,
       })
     );
     const slots = (result.Item as any)?.slots ?? [];
@@ -68,22 +70,39 @@ export class MatchmakingDynamoDBRepository implements MatchmakingRepository {
     );
   }
 
-  async saveRouletteState(slots: RouletteSlot[]): Promise<void> {
-    await this.ctx.ddb.send(
-      new PutCommand({
-        TableName: this.ctx.tableName,
-        Item: {
-          PK: "MATCHMAKING",
-          SK: "ROULETTE",
-          slots: slots.map((s) => ({
-            key: s.key,
-            value: s.value,
-            slotIndex: s.slotIndex,
-          })),
-          ttl: ttl(),
-        },
-      })
-    );
+  async saveRouletteState(slots: RouletteSlot[], expectedSlotCount?: number): Promise<boolean> {
+    const item = {
+      PK: "MATCHMAKING",
+      SK: "ROULETTE",
+      slots: slots.map((s) => ({
+        key: s.key,
+        value: s.value,
+        slotIndex: s.slotIndex,
+      })),
+      slotCount: slots.length,
+      ttl: ttl(),
+    };
+
+    const params: any = {
+      TableName: this.ctx.tableName,
+      Item: item,
+    };
+
+    if (expectedSlotCount !== undefined) {
+      params.ConditionExpression =
+        "attribute_not_exists(PK) OR slotCount = :expected";
+      params.ExpressionAttributeValues = { ":expected": expectedSlotCount };
+    }
+
+    try {
+      await this.ctx.ddb.send(new PutCommand(params));
+      return true;
+    } catch (err: any) {
+      if (err.name === "ConditionalCheckFailedException") {
+        return false;
+      }
+      throw err;
+    }
   }
 
   async deleteRouletteState(): Promise<void> {

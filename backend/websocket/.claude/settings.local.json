@@ -12,7 +12,8 @@
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(find lambda:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(wc:*)"
     ]
   }
 }

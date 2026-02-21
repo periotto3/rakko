@@ -6,6 +6,6 @@ export interface MatchmakingRepository {
   removePlayer(connectionId: string): Promise<void>;
   getWaitingPlayers(): Promise<WaitingPlayer[]>;
   getRouletteState(): Promise<RouletteSlot[]>;
-  saveRouletteState(slots: RouletteSlot[]): Promise<void>;
+  saveRouletteState(slots: RouletteSlot[], expectedSlotCount?: number): Promise<boolean>;
   deleteRouletteState(): Promise<void>;
 }

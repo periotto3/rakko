@@ -1,6 +1,8 @@
 import { ImageGenerationService } from "../../domain/model/imageGeneration/imageGenerationService.js";
 
 const TIMEOUT_MS = 70_000;
+const ERROR_BODY_LOG_LIMIT = 500;
+const MAX_RETRIES = 3;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -12,6 +14,26 @@ function parseJson(text: string): unknown {
   } catch {
     throw new Error("Image API returned non-JSON response");
   }
+}
+
+function summarizeText(text: string, limit = ERROR_BODY_LOG_LIMIT): string {
+  const compact = text.replace(/\s+/g, " ").trim();
+  if (compact.length <= limit) {
+    return compact;
+  }
+  return `${compact.slice(0, limit)}...`;
+}
+
+function classifyHttp400(responseBody: string): "policy_blocked" | "other_400" {
+  const normalized = responseBody.toLowerCase();
+  if (
+    normalized.includes("responsible ai policy") ||
+    normalized.includes("has been blocked") ||
+    normalized.includes("filtered from the response")
+  ) {
+    return "policy_blocked";
+  }
+  return "other_400";
 }
 
 function unwrapLambdaUrlResponse(data: unknown): unknown {
@@ -58,7 +80,7 @@ function extractImageUrls(data: unknown): string[] {
 export class HttpImageGenerationService implements ImageGenerationService {
   constructor(private readonly apiUrl: string) {}
 
-  async generate(prompt: string, roomId: string): Promise<string[]> {
+  private async requestImage(prompt: string, roomId: string): Promise<string[]> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     const startedAt = Date.now();
@@ -79,6 +101,7 @@ export class HttpImageGenerationService implements ImageGenerationService {
         body: JSON.stringify({ prompt, roomId }),
         signal: controller.signal,
       });
+      const text = await response.text();
 
       console.info(
         JSON.stringify({
@@ -90,10 +113,21 @@ export class HttpImageGenerationService implements ImageGenerationService {
       );
 
       if (!response.ok) {
-        throw new Error(`Image API returned ${response.status}`);
+        const responseBody = summarizeText(text);
+        const errorType =
+          response.status === 400 ? classifyHttp400(responseBody) : "http_error";
+        console.error(
+          JSON.stringify({
+            event: "image_api_http_error_body",
+            roomId,
+            status: response.status,
+            errorType,
+            responseBody,
+          })
+        );
+        throw new Error(`Image API returned ${response.status}: ${responseBody}`);
       }
 
-      const text = await response.text();
       const data = parseJson(text);
       const payload = unwrapLambdaUrlResponse(data);
       const urls = extractImageUrls(payload);
@@ -128,5 +162,28 @@ export class HttpImageGenerationService implements ImageGenerationService {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async generate(prompt: string, roomId: string): Promise<string[]> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        return await this.requestImage(prompt, roomId);
+      } catch (err) {
+        lastError = err;
+        if (attempt < MAX_RETRIES) {
+          console.warn(
+            JSON.stringify({
+              event: "image_api_retry",
+              roomId,
+              attempt,
+              maxRetries: MAX_RETRIES,
+              errorMessage: err instanceof Error ? err.message : String(err),
+            })
+          );
+        }
+      }
+    }
+    throw lastError;
   }
 }

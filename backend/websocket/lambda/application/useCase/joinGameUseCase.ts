@@ -37,11 +37,31 @@ export class JoinGameUseCase {
 
     let slots = await this.matchmakingRepo.getRouletteState();
     let newSlot: RouletteSlot | null = null;
-    if (slots.length < waiting.length && slots.length < 4) {
+
+    const MAX_RETRIES = 5;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (slots.length >= waiting.length || slots.length >= 4) break;
+
       const key = THEME_SLOT_KEYS[slots.length];
-      newSlot = new RouletteSlot(key, pickRandomItem(key), slots.length);
-      slots = [...slots, newSlot];
-      await this.matchmakingRepo.saveRouletteState(slots);
+      const candidate = new RouletteSlot(key, pickRandomItem(key), slots.length);
+      const expectedSlotCount = slots.length;
+      const updatedSlots = [...slots, candidate];
+
+      const saved = await this.matchmakingRepo.saveRouletteState(updatedSlots, expectedSlotCount);
+      if (saved) {
+        newSlot = candidate;
+        slots = updatedSlots;
+        break;
+      }
+
+      console.info(
+        JSON.stringify({
+          event: "roulette_slot_conflict",
+          attempt,
+          expectedSlotCount,
+        })
+      );
+      slots = await this.matchmakingRepo.getRouletteState();
     }
 
     if (waiting.length < 4) {
@@ -180,17 +200,19 @@ export class JoinGameUseCase {
         })
       );
 
-      // Recovery: re-add players to matchmaking queue
-      await Promise.all(
-        matchedPlayers.map((w) =>
+      // Recovery: re-add players to matchmaking queue and restore roulette state
+      await Promise.all([
+        ...matchedPlayers.map((w) =>
           this.matchmakingRepo.addPlayer(w.connectionId, w.playerName)
-        )
-      );
+        ),
+        this.matchmakingRepo.saveRouletteState(slots),
+      ]);
       console.info(
         JSON.stringify({
           event: "players_recovered_to_queue",
           gameId,
           playerCount: matchedPlayers.length,
+          rouletteRestored: true,
         })
       );
 
