@@ -1,15 +1,7 @@
 import { ConnectionRepository } from "../../domain/model/connection/connectionRepository.js";
 import { GameRepository } from "../../domain/model/game/gameRepository.js";
-import { Player } from "../../domain/model/player/player.js";
 import { NotificationService } from "../service/notificationService.js";
 import { ApplicationError } from "../error/applicationError.js";
-import {
-  drawCard,
-  getDrawTarget,
-  getNextActivePlayer,
-  isGameOver,
-  getRankings,
-} from "../../domain/service/drawService.js";
 
 export class DrawCardUseCase {
   constructor(
@@ -43,7 +35,7 @@ export class DrawCardUseCase {
       throw new ApplicationError("NOT_YOUR_TURN", "Not your turn");
     }
 
-    const targetIndex = getDrawTarget(game.players, drawerIndex);
+    const targetIndex = game.getDrawTarget(drawerIndex);
     if (targetIndex === -1) {
       throw new ApplicationError(
         "NO_DRAW_TARGET",
@@ -59,13 +51,7 @@ export class DrawCardUseCase {
       );
     }
 
-    const result = drawCard(
-      game.players,
-      drawerIndex,
-      targetIndex,
-      cardIndex,
-      game.finishedCount
-    );
+    const result = game.drawCard(drawerIndex, targetIndex, cardIndex);
 
     let updatedGame = game.applyDrawResult(result.players, result.finishedCount);
 
@@ -76,7 +62,7 @@ export class DrawCardUseCase {
       paired: result.paired,
     });
 
-    if (isGameOver(updatedGame.players)) {
+    if (updatedGame.isOver) {
       let players = updatedGame.players;
       let finishedCount = updatedGame.finishedCount;
 
@@ -91,7 +77,7 @@ export class DrawCardUseCase {
       updatedGame = updatedGame.finish(players, finishedCount);
       await this.gameRepo.update(updatedGame);
 
-      const rankings = getRankings(updatedGame.players);
+      const rankings = updatedGame.getRankings();
       await this.notificationService.broadcastToGame(updatedGame, {
         type: "game_over",
         rankings,
@@ -105,7 +91,7 @@ export class DrawCardUseCase {
     }
 
     updatedGame = updatedGame.advanceTurn(
-      getNextActivePlayer(updatedGame.players, drawerIndex)
+      updatedGame.getNextActivePlayer(drawerIndex)
     );
     await this.gameRepo.update(updatedGame);
 

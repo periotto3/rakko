@@ -8,7 +8,7 @@ import { Player } from "../../domain/model/player/player.js";
 import { PublicPlayer } from "../../domain/model/player/publicPlayer.js";
 import { Game } from "../../domain/model/game/game.js";
 import { RouletteSlot } from "../../domain/model/matchmaking/rouletteSlot.js";
-import { dealCards } from "../../domain/service/deckService.js";
+import { Deck } from "../../domain/model/card/deck.js";
 import {
   THEME_SLOT_KEYS,
   THEME_ITEMS,
@@ -76,7 +76,7 @@ export class JoinGameUseCase {
         new Player(w.connectionId, w.playerName, AVATARS[i], i, [], null)
     );
 
-    players = dealCards(players);
+    players = Deck.deal(players);
 
     const gameId = randomUUID();
     const game = new Game(gameId, "playing", players, 0, 0, 1);
