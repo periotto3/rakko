@@ -33,24 +33,28 @@ export default function TitleScreen({ onStart }: TitleScreenProps) {
 
         {/* Cards & Character */}
         <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
-          {/* Cards */}
+          {/* AWS Resource Cards */}
           <div className="flex -space-x-4">
-            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center text-xs font-bold transform -rotate-12">
-              <span className="text-black">2♣</span>
+            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-orange-300 flex flex-col items-center justify-center gap-0.5 transform -rotate-12 px-1 py-2">
+              <span className="text-orange-500 text-lg leading-none">🖥</span>
+              <span className="text-orange-600 text-[9px] font-bold leading-none">EC2</span>
             </div>
-            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center text-xs font-bold transform -rotate-4">
-              <span className="text-red-500">4♥</span>
+            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-green-300 flex flex-col items-center justify-center gap-0.5 transform -rotate-4 px-1 py-2">
+              <span className="text-green-600 text-lg leading-none">🪣</span>
+              <span className="text-green-700 text-[9px] font-bold leading-none">S3</span>
             </div>
-            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center text-xs font-bold transform rotate-4">
-              <span className="text-red-500">10♦</span>
+            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-yellow-300 flex flex-col items-center justify-center gap-0.5 transform rotate-4 px-1 py-2">
+              <span className="text-yellow-500 text-lg leading-none">λ</span>
+              <span className="text-yellow-600 text-[9px] font-bold leading-none">Lambda</span>
             </div>
-            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center text-xs font-bold transform rotate-12">
-              <span className="text-black">K♠</span>
+            <div className="w-12 h-18 bg-white rounded-lg shadow-md border border-blue-300 flex flex-col items-center justify-center gap-0.5 transform rotate-12 px-1 py-2">
+              <span className="text-blue-600 text-lg leading-none">🗄</span>
+              <span className="text-blue-700 text-[9px] font-bold leading-none">RDS</span>
             </div>
           </div>
 
-          {/* Character (rabbit-like mascot) */}
-          <div className="text-6xl ml-4">🐰</div>
+          {/* AWS Cloud mascot */}
+          <div className="text-6xl ml-4">☁️</div>
         </div>
 
         {/* Buttons */}
