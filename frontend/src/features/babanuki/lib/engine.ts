@@ -4,8 +4,9 @@ import { AWS_SERVICES, JOKER_IMAGE_URL } from "./constants";
 export function createDeck(): Card[] {
   const cards: Card[] = [];
   for (const svc of AWS_SERVICES) {
-    cards.push({ id: `${svc.rank}-a`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
-    cards.push({ id: `${svc.rank}-b`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
+    for (const copy of ["a", "b", "c", "d"]) {
+      cards.push({ id: `${svc.rank}-${copy}`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
+    }
   }
   cards.push({ id: "joker", suit: "joker", rank: 0, label: "請求書", imageUrl: JOKER_IMAGE_URL });
   return cards;
