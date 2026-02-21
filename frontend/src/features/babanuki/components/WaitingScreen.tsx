@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { BabanukiPlayer, ThemeSlot } from "../lib/types";
 import {
-  THEME_WHO,
-  THEME_WHEN,
-  THEME_WHERE,
-  THEME_WHAT,
+  THEME_ERA,
+  THEME_WORLDVIEW,
+  THEME_PLACE,
 } from "../lib/engine";
 
 interface WaitingScreenProps {
@@ -15,18 +14,16 @@ interface WaitingScreenProps {
   onThemeDecided: (theme: ThemeSlot) => void;
 }
 
-const SLOT_KEYS: (keyof ThemeSlot)[] = ["who", "when", "where", "what"];
+const SLOT_KEYS: (keyof ThemeSlot)[] = ["era", "worldview", "place"];
 const SLOT_ITEMS: Record<keyof ThemeSlot, string[]> = {
-  who: THEME_WHO,
-  when: THEME_WHEN,
-  where: THEME_WHERE,
-  what: THEME_WHAT,
+  era: THEME_ERA,
+  worldview: THEME_WORLDVIEW,
+  place: THEME_PLACE,
 };
 const SLOT_LABELS: Record<keyof ThemeSlot, string> = {
-  who: "だれが",
-  when: "いつ",
-  where: "どこで",
-  what: "なにを",
+  era: "時代",
+  worldview: "世界観",
+  place: "場所",
 };
 
 function SlotReel({
@@ -91,10 +88,9 @@ export default function WaitingScreen({
   const [nextSlotIndex, setNextSlotIndex] = useState(0);
   const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeSlot>({
-    who: THEME_WHO[0],
-    when: THEME_WHEN[0],
-    where: THEME_WHERE[0],
-    what: THEME_WHAT[0],
+    era: THEME_ERA[0],
+    worldview: THEME_WORLDVIEW[0],
+    place: THEME_PLACE[0],
   });
   const [decided, setDecided] = useState(false);
 
