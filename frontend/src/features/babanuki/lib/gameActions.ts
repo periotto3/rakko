@@ -5,7 +5,7 @@ export type GameAction =
   | { type: "START_GAME" }
   | { type: "PLAYER_JOIN"; payload: BabanukiPlayer }
   | { type: "SET_THEME"; payload: ThemeSlot }
-  | { type: "GENERATION_COMPLETE"; payload: { imageUrl: string } }
+  | { type: "GENERATION_COMPLETE"; payload: { imageUrl: string; dealtPlayers: BabanukiPlayer[] } }
   | {
       type: "UPDATE_GAME";
       payload: {

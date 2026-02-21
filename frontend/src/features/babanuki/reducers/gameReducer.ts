@@ -1,6 +1,6 @@
 import { GameState, initialGameState } from "../lib/gameState";
 import { GameAction } from "../lib/gameActions";
-import { dealCards, getDrawTarget } from "../lib/engine";
+import { getDrawTarget } from "../lib/engine";
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -16,10 +16,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, theme: action.payload, phase: "generating" };
 
     case "GENERATION_COMPLETE": {
-      const dealtPlayers = dealCards(state.players);
+      const { imageUrl, dealtPlayers } = action.payload;
       return {
         ...state,
-        backgroundImage: action.payload.imageUrl,
+        backgroundImage: imageUrl,
         players: dealtPlayers,
         currentTurnIndex: 0,
         targetIndex: getDrawTarget(dealtPlayers, 0),

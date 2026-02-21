@@ -9,6 +9,7 @@ import {
   PlayScreen,
   ResultScreen,
 } from "@/features/babanuki";
+import { dealCards } from "@/features/babanuki/lib/engine";
 import { useGameState } from "@/features/babanuki/hooks/useGameState";
 
 const MAX_PLAYERS = 4;
@@ -55,9 +56,10 @@ export default function BabanukiPage() {
 
   const handleGenerationComplete = useCallback(
     (imageUrl: string) => {
-      dispatch({ type: "GENERATION_COMPLETE", payload: { imageUrl } });
+      const dealtPlayers = dealCards(state.players);
+      dispatch({ type: "GENERATION_COMPLETE", payload: { imageUrl, dealtPlayers } });
     },
-    [dispatch]
+    [dispatch, state.players]
   );
 
   const handleRematch = useCallback(() => {
