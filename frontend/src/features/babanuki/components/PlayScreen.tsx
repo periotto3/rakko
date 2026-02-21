@@ -89,16 +89,19 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
 function CardBack({
   onClick,
   highlighted,
+  isClicked,
 }: {
   onClick?: () => void;
   highlighted?: boolean;
+  isClicked?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      disabled={!onClick}
-      className={`w-[52px] h-[74px] rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0 transition-transform duration-150
-        ${onClick ? "cursor-pointer hover:scale-110 hover:-translate-y-2" : "cursor-default"}
+      disabled={!onClick || isClicked}
+      className={`w-[52px] h-[74px] rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0
+        ${isClicked ? "animate-card-lift pointer-events-none" : "transition-transform duration-150"}
+        ${onClick && !isClicked ? "cursor-pointer hover:scale-110 hover:-translate-y-2" : "cursor-default"}
         ${highlighted ? "border-yellow-400 ring-2 ring-yellow-300" : "border-blue-900"}
       `}
       style={{
@@ -121,12 +124,14 @@ function OpponentCharacter({
   isCurrentTurn,
   isTarget,
   onCardClick,
+  clickedCardIndex,
 }: {
   player: BabanukiPlayer;
   isCurrentTurn: boolean;
   isTarget: boolean;
   onCardClick?: (index: number) => void;
   position: "left" | "top" | "right";
+  clickedCardIndex?: number | null;
 }) {
   const finished = player.hand.length === 0;
 
@@ -165,8 +170,9 @@ function OpponentCharacter({
             <CardBack
               key={i}
               highlighted={isTarget}
+              isClicked={isTarget && clickedCardIndex === i}
               onClick={
-                isTarget && onCardClick ? () => onCardClick(i) : undefined
+                isTarget && onCardClick && clickedCardIndex == null ? () => onCardClick(i) : undefined
               }
             />
           ))}
@@ -219,6 +225,7 @@ export default function PlayScreen({
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
   const [drawnCardPreview, setDrawnCardPreview] = useState<Card | null>(null);
   const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
+  const [clickedCardIndex, setClickedCardIndex] = useState<number | null>(null);
 
   const processingRef = useRef(false);
   const cpuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -342,6 +349,7 @@ export default function PlayScreen({
     setIsProcessing(true);
 
     const drawnCard = players[targetIndex].hand[cardIndex];
+    setClickedCardIndex(cardIndex);
     if (drawnCard) {
       setDrawnCardPreview(drawnCard);
       const wouldPair = players[currentTurnIndex].hand.some(
@@ -351,6 +359,7 @@ export default function PlayScreen({
     }
 
     cpuTimeoutRef.current = setTimeout(() => {
+      setClickedCardIndex(null);
       setDrawnCardPreview(null);
       setHighlightedRank(null);
 
@@ -434,6 +443,21 @@ export default function PlayScreen({
   // Counter-clockwise: 0(bottom) → 1(right) → 2(top) → 3(left)
 
   return (
+    <>
+    <style>{`
+      @keyframes card-lift {
+        0%   { transform: scale(1) translateY(0);    opacity: 1; }
+        50%  { transform: scale(1.3) translateY(-18px); opacity: 0.8; }
+        100% { transform: scale(0.7) translateY(-36px); opacity: 0; }
+      }
+      @keyframes card-arrive {
+        0%   { transform: translateY(-60px) scale(0.6); opacity: 0; }
+        65%  { transform: translateY(6px) scale(1.1);  opacity: 1; }
+        100% { transform: translateY(0) scale(1);      opacity: 1; }
+      }
+      .animate-card-lift   { animation: card-lift   0.55s ease-in  forwards; }
+      .animate-card-arrive { animation: card-arrive 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    `}</style>
     <div className="h-screen flex flex-col relative overflow-hidden select-none">
       {/* Background */}
       <div
@@ -503,6 +527,7 @@ export default function PlayScreen({
                   ? handlePlayerDraw
                   : undefined
               }
+              clickedCardIndex={targetIndex === 3 ? clickedCardIndex : null}
               position="left"
             />
           )}
@@ -520,6 +545,7 @@ export default function PlayScreen({
                   ? handlePlayerDraw
                   : undefined
               }
+              clickedCardIndex={targetIndex === 2 ? clickedCardIndex : null}
               position="top"
             />
           )}
@@ -537,6 +563,7 @@ export default function PlayScreen({
                   ? handlePlayerDraw
                   : undefined
               }
+              clickedCardIndex={targetIndex === 1 ? clickedCardIndex : null}
               position="right"
             />
           )}
@@ -636,7 +663,7 @@ export default function PlayScreen({
           <div className="flex items-center justify-center gap-3">
             <PlayerHand player={players[0]} highlightedRank={highlightedRank} />
             {drawnCardPreview && (
-              <div className="flex flex-col items-center gap-0.5 shrink-0">
+              <div key={drawnCardPreview.id} className="flex flex-col items-center gap-0.5 shrink-0 animate-card-arrive">
                 <span className="text-[9px] text-yellow-300 font-bold">引いた！</span>
                 <CardFace card={drawnCardPreview} highlighted={highlightedRank === drawnCardPreview.rank} />
               </div>
@@ -645,5 +672,6 @@ export default function PlayScreen({
         </div>
       </div>
     </div>
+    </>
   );
 }
