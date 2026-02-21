@@ -3,14 +3,17 @@ import {
   shuffle,
   removePairs,
   dealCards,
+} from "../lambda/domain/service/deckService";
+import {
   getNextActivePlayer,
   getDrawTarget,
   drawCard,
   getActivePlayers,
   isGameOver,
   getRankings,
-} from "../lambda/lib/game-logic";
-import { Card, Player } from "../lambda/lib/types";
+} from "../lambda/domain/service/drawService";
+import { Card } from "../lambda/domain/model/card/card";
+import { Player } from "../lambda/domain/model/player/player";
 
 // Helper to create a card
 function card(suit: Card["suit"], rank: number, id?: string): Card {
@@ -18,24 +21,23 @@ function card(suit: Card["suit"], rank: number, id?: string): Card {
     0: "JOKER", 1: "A", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
     8: "8", 9: "9", 10: "10", 11: "J", 12: "Q", 13: "K",
   };
-  return { id: id ?? `${suit}-${rank}`, suit, rank, label: labels[rank] };
+  return new Card(id ?? `${suit}-${rank}`, suit, rank, labels[rank]);
 }
 
 // Helper to create a player
 function makePlayer(
   seatIndex: number,
   hand: Card[],
-  opts?: Partial<Player>
+  opts?: { connectionId?: string; name?: string; avatar?: string; finishedOrder?: number | null }
 ): Player {
-  return {
-    connectionId: `conn-${seatIndex}`,
-    name: `Player${seatIndex}`,
-    avatar: "😊",
+  return new Player(
+    opts?.connectionId ?? `conn-${seatIndex}`,
+    opts?.name ?? `Player${seatIndex}`,
+    opts?.avatar ?? "😊",
     seatIndex,
     hand,
-    finishedOrder: null,
-    ...opts,
-  };
+    opts?.finishedOrder ?? null
+  );
 }
 
 describe("createDeck", () => {
@@ -401,54 +403,77 @@ describe("getActivePlayers", () => {
 });
 
 describe("isGameOver", () => {
-  it("should return true when any player has finished", () => {
-    const hasFinished = [
-      makePlayer(0, [card("joker", 0, "joker")]),
+  it("should return true when at least one player has finished", () => {
+    const players = [
+      makePlayer(0, [card("spades", 1)]),
       makePlayer(1, [], { finishedOrder: 1 }),
-      makePlayer(2, [card("spades", 1)]),
-      makePlayer(3, [card("hearts", 2)]),
+      makePlayer(2, [card("diamonds", 3)]),
+      makePlayer(3, [card("joker", 0, "joker")]),
     ];
-    expect(isGameOver(hasFinished)).toBe(true);
+    expect(isGameOver(players)).toBe(true);
   });
 
   it("should return false when no player has finished", () => {
-    const noneFinished = [
+    const players = [
       makePlayer(0, [card("spades", 1)]),
       makePlayer(1, [card("hearts", 2)]),
       makePlayer(2, [card("diamonds", 3)]),
-      makePlayer(3, [card("clubs", 4)]),
+      makePlayer(3, [card("joker", 0, "joker")]),
     ];
-    expect(isGameOver(noneFinished)).toBe(false);
+    expect(isGameOver(players)).toBe(false);
   });
 });
 
 describe("getRankings", () => {
-  it("should rank by finishedOrder (lower = better)", () => {
+  it("should rank finished players first by finishedOrder", () => {
     const players = [
-      makePlayer(0, [], { finishedOrder: 2 }),
+      makePlayer(0, [card("spades", 1)], { finishedOrder: null }),
       makePlayer(1, [], { finishedOrder: 1 }),
-      makePlayer(2, [], { finishedOrder: 3 }),
-      makePlayer(3, [card("joker", 0, "joker")], { finishedOrder: null }),
+      makePlayer(2, [card("joker", 0, "joker")], { finishedOrder: null }),
+      makePlayer(3, [card("diamonds", 3), card("clubs", 4)], { finishedOrder: null }),
     ];
     const rankings = getRankings(players);
     expect(rankings[0].seatIndex).toBe(1); // finished 1st
     expect(rankings[0].rank).toBe(1);
-    expect(rankings[1].seatIndex).toBe(0); // finished 2nd
+  });
+
+  it("should rank remaining non-joker players by card count ascending", () => {
+    const players = [
+      makePlayer(0, [card("spades", 1)], { finishedOrder: null }),
+      makePlayer(1, [], { finishedOrder: 1 }),
+      makePlayer(2, [card("joker", 0, "joker")], { finishedOrder: null }),
+      makePlayer(3, [card("diamonds", 3), card("clubs", 4)], { finishedOrder: null }),
+    ];
+    const rankings = getRankings(players);
+    // After finished player (seat 1): seat 0 (1 card), seat 3 (2 cards), seat 2 (joker)
+    expect(rankings[1].seatIndex).toBe(0); // 1 card
     expect(rankings[1].rank).toBe(2);
-    expect(rankings[2].seatIndex).toBe(2); // finished 3rd
+    expect(rankings[2].seatIndex).toBe(3); // 2 cards
     expect(rankings[2].rank).toBe(3);
-    expect(rankings[3].seatIndex).toBe(3); // last (still has cards)
+  });
+
+  it("should always place joker holder last", () => {
+    const players = [
+      makePlayer(0, [card("spades", 1)], { finishedOrder: null }),
+      makePlayer(1, [], { finishedOrder: 1 }),
+      makePlayer(2, [card("joker", 0, "joker")], { finishedOrder: null }),
+      makePlayer(3, [card("diamonds", 3), card("clubs", 4)], { finishedOrder: null }),
+    ];
+    const rankings = getRankings(players);
+    expect(rankings[3].seatIndex).toBe(2); // joker holder is last
     expect(rankings[3].rank).toBe(4);
   });
 
-  it("should place players still holding cards last", () => {
+  it("should place joker holder last even with fewer cards than others", () => {
     const players = [
-      makePlayer(0, [card("joker", 0, "joker")], { finishedOrder: null }),
+      makePlayer(0, [card("spades", 1), card("hearts", 2), card("diamonds", 3)], { finishedOrder: null }),
       makePlayer(1, [], { finishedOrder: 1 }),
+      makePlayer(2, [card("joker", 0, "joker")], { finishedOrder: null }),
     ];
     const rankings = getRankings(players);
-    expect(rankings[0].seatIndex).toBe(1);
-    expect(rankings[1].seatIndex).toBe(0);
+    expect(rankings[0].seatIndex).toBe(1); // finished
+    expect(rankings[1].seatIndex).toBe(0); // 3 cards but no joker
+    expect(rankings[2].seatIndex).toBe(2); // joker holder always last
   });
 
   it("should include name and avatar in rankings", () => {

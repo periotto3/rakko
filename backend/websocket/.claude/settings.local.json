@@ -9,7 +9,9 @@
       "WebSearch",
       "Bash(npx jest:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm test:*)"
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(find lambda:*)"
     ]
   }
 }
