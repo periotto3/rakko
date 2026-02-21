@@ -3,14 +3,17 @@ import {
   shuffle,
   removePairs,
   dealCards,
+} from "../lambda/domain/service/deckService";
+import {
   getNextActivePlayer,
   getDrawTarget,
   drawCard,
   getActivePlayers,
   isGameOver,
   getRankings,
-} from "../lambda/lib/game-logic";
-import { Card, Player } from "../lambda/lib/types";
+} from "../lambda/domain/service/drawService";
+import { Card } from "../lambda/domain/model/card/card";
+import { Player } from "../lambda/domain/model/player/player";
 
 // Helper to create a card
 function card(suit: Card["suit"], rank: number, id?: string): Card {
@@ -18,24 +21,23 @@ function card(suit: Card["suit"], rank: number, id?: string): Card {
     0: "JOKER", 1: "A", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
     8: "8", 9: "9", 10: "10", 11: "J", 12: "Q", 13: "K",
   };
-  return { id: id ?? `${suit}-${rank}`, suit, rank, label: labels[rank] };
+  return new Card(id ?? `${suit}-${rank}`, suit, rank, labels[rank]);
 }
 
 // Helper to create a player
 function makePlayer(
   seatIndex: number,
   hand: Card[],
-  opts?: Partial<Player>
+  opts?: { connectionId?: string; name?: string; avatar?: string; finishedOrder?: number | null }
 ): Player {
-  return {
-    connectionId: `conn-${seatIndex}`,
-    name: `Player${seatIndex}`,
-    avatar: "😊",
+  return new Player(
+    opts?.connectionId ?? `conn-${seatIndex}`,
+    opts?.name ?? `Player${seatIndex}`,
+    opts?.avatar ?? "😊",
     seatIndex,
     hand,
-    finishedOrder: null,
-    ...opts,
-  };
+    opts?.finishedOrder ?? null
+  );
 }
 
 describe("createDeck", () => {

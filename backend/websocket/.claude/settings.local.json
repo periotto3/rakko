@@ -8,7 +8,10 @@
       "Bash(grep:*)",
       "WebSearch",
       "Bash(npx jest:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(find lambda:*)"
     ]
   }
 }

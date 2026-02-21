@@ -1,71 +1,42 @@
-import { APIGatewayProxyWebsocketEventV2 } from "aws-lambda";
-import {
-  saveConnection,
-  deleteConnection,
-  removeFromMatchmaking,
-  getWaitingPlayers,
-  deleteRouletteState,
-} from "./lib/db";
-import { handleJoin } from "./lib/actions/join";
-import { handleDrawCard } from "./lib/actions/draw-card";
-import { handleGetState } from "./lib/actions/get-state";
-import { ClientMessage } from "./lib/types";
+// Infrastructure
+import { createDynamoDBClient } from "./infrastructure/dynamodb/dynamoDBClient.js";
+import { GameDynamoDBRepository } from "./infrastructure/dynamodb/gameDynamoDBRepository.js";
+import { ConnectionDynamoDBRepository } from "./infrastructure/dynamodb/connectionDynamoDBRepository.js";
+import { MatchmakingDynamoDBRepository } from "./infrastructure/dynamodb/matchmakingDynamoDBRepository.js";
+import { ApiGatewayNotificationService } from "./infrastructure/websocket/apiGatewayNotificationService.js";
 
-export async function connectHandler(event: APIGatewayProxyWebsocketEventV2) {
-  const connectionId = event.requestContext.connectionId!;
-  console.log("Connected:", connectionId);
+// UseCases
+import { ConnectUseCase } from "./application/useCase/connectUseCase.js";
+import { DisconnectUseCase } from "./application/useCase/disconnectUseCase.js";
+import { JoinGameUseCase } from "./application/useCase/joinGameUseCase.js";
+import { DrawCardUseCase } from "./application/useCase/drawCardUseCase.js";
+import { GetStateUseCase } from "./application/useCase/getStateUseCase.js";
 
-  await saveConnection(connectionId, "");
+// Presentation
+import { createConnectHandler } from "./presentation/handler/connectHandler.js";
+import { createDisconnectHandler } from "./presentation/handler/disconnectHandler.js";
+import { createMessageHandler } from "./presentation/handler/messageHandler.js";
 
-  return { statusCode: 200, body: "Connected" };
+// --- DI Container（手動コンストラクタ注入）---
+const ddb = createDynamoDBClient();
+
+const gameRepo = new GameDynamoDBRepository(ddb);
+const connectionRepo = new ConnectionDynamoDBRepository(ddb);
+const matchmakingRepo = new MatchmakingDynamoDBRepository(ddb);
+
+function createNotificationService(endpoint: string) {
+  return new ApiGatewayNotificationService(endpoint, connectionRepo);
 }
 
-export async function disconnectHandler(
-  event: APIGatewayProxyWebsocketEventV2
-) {
-  const connectionId = event.requestContext.connectionId!;
-  console.log("Disconnected:", connectionId);
+const connectUseCase = new ConnectUseCase(connectionRepo);
+const disconnectUseCase = new DisconnectUseCase(connectionRepo, matchmakingRepo);
 
-  await removeFromMatchmaking(connectionId);
-  await deleteConnection(connectionId);
-
-  const remaining = await getWaitingPlayers();
-  if (remaining.length === 0) {
-    await deleteRouletteState();
-  }
-
-  return { statusCode: 200, body: "Disconnected" };
-}
-
-export async function messageHandler(event: APIGatewayProxyWebsocketEventV2) {
-  const { connectionId, domainName, stage } = event.requestContext;
-  const endpoint = `https://${domainName}/${stage}`;
-
-  let body: ClientMessage;
-  try {
-    body = JSON.parse(event.body ?? "{}");
-  } catch {
-    return { statusCode: 400, body: "Invalid JSON" };
-  }
-
-  try {
-    switch (body.action) {
-      case "join":
-        await handleJoin(endpoint, connectionId!, body.playerName);
-        break;
-      case "draw_card":
-        await handleDrawCard(endpoint, connectionId!, body.cardIndex);
-        break;
-      case "get_state":
-        await handleGetState(endpoint, connectionId!);
-        break;
-      default:
-        return { statusCode: 400, body: "Unknown action" };
-    }
-  } catch (err) {
-    console.error("Error handling action:", err);
-    return { statusCode: 500, body: "Internal server error" };
-  }
-
-  return { statusCode: 200, body: "OK" };
-}
+// --- Lambda Handler Exports ---
+export const connectHandler = createConnectHandler(connectUseCase);
+export const disconnectHandler = createDisconnectHandler(disconnectUseCase);
+export const messageHandler = createMessageHandler(
+  (endpoint) => new JoinGameUseCase(connectionRepo, matchmakingRepo, gameRepo, createNotificationService(endpoint)),
+  (endpoint) => new DrawCardUseCase(connectionRepo, gameRepo, createNotificationService(endpoint)),
+  (endpoint) => new GetStateUseCase(connectionRepo, gameRepo, createNotificationService(endpoint)),
+  createNotificationService
+);
