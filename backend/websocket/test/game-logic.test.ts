@@ -401,32 +401,24 @@ describe("getActivePlayers", () => {
 });
 
 describe("isGameOver", () => {
-  it("should return true when 1 or fewer active players", () => {
-    const oneActive = [
+  it("should return true when any player has finished", () => {
+    const hasFinished = [
       makePlayer(0, [card("joker", 0, "joker")]),
-      makePlayer(1, []),
-      makePlayer(2, []),
-      makePlayer(3, []),
+      makePlayer(1, [], { finishedOrder: 1 }),
+      makePlayer(2, [card("spades", 1)]),
+      makePlayer(3, [card("hearts", 2)]),
     ];
-    expect(isGameOver(oneActive)).toBe(true);
+    expect(isGameOver(hasFinished)).toBe(true);
   });
 
-  it("should return true when no active players", () => {
-    const noneActive = [
-      makePlayer(0, []),
-      makePlayer(1, []),
-    ];
-    expect(isGameOver(noneActive)).toBe(true);
-  });
-
-  it("should return false when 2+ active players", () => {
-    const twoActive = [
+  it("should return false when no player has finished", () => {
+    const noneFinished = [
       makePlayer(0, [card("spades", 1)]),
       makePlayer(1, [card("hearts", 2)]),
-      makePlayer(2, []),
-      makePlayer(3, []),
+      makePlayer(2, [card("diamonds", 3)]),
+      makePlayer(3, [card("clubs", 4)]),
     ];
-    expect(isGameOver(twoActive)).toBe(false);
+    expect(isGameOver(noneFinished)).toBe(false);
   });
 });
 

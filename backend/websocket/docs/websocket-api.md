@@ -44,18 +44,31 @@ wss://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev
 
 ### `waiting` — マッチング待機中
 
-4人揃うまで、待機中の全員に送信される。
+4人揃うまで、待機中の全員に送信される。ルーレット演出の情報を含む。
 
 ```json
 {
   "type": "waiting",
-  "waitingCount": 2
+  "waitingCount": 2,
+  "decidedSlots": [
+    { "key": "who", "value": "みんなで", "slotIndex": 0 }
+  ],
+  "newSlot": { "key": "when", "value": "深夜に", "slotIndex": 1 },
+  "slotCandidates": {
+    "who": ["Aさんが", "Bさんが", "Cさんが", "みんなで", "あなたが"],
+    "when": ["社会人のとき", "子供のとき", "夏休みに", "深夜に", "朝一で"],
+    "where": ["家で", "学校で", "海辺で", "宇宙で", "森の中で"],
+    "what": ["さみしかった話", "笑った話", "驚いた話", "冒険した話", "食べた話"]
+  }
 }
 ```
 
-| フィールド     | 型     | 説明             |
-| -------------- | ------ | ---------------- |
-| `waitingCount` | number | 現在の待機人数 (1〜3) |
+| フィールド       | 型                          | 説明                                              |
+| ---------------- | --------------------------- | ------------------------------------------------- |
+| `waitingCount`   | number                      | 現在の待機人数 (1〜4)                              |
+| `decidedSlots`   | RouletteSlot[]              | 確定済みのルーレットスロット一覧                    |
+| `newSlot`        | RouletteSlot \| null        | 今回新たに確定したスロット (なければ `null`)         |
+| `slotCandidates` | Record\<string, string[]\>  | 各カテゴリの候補一覧 (ルーレット演出用)             |
 
 ### `game_start` — ゲーム開始
 
@@ -201,5 +214,17 @@ wss://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev
   name: string       // プレイヤー名
   avatar: string     // アバター絵文字
   rank: number       // 順位 (1=1位, 4=最下位)
+}
+```
+
+### RouletteSlot
+
+ルーレット演出で確定した1つのテーマスロット。
+
+```typescript
+{
+  key: string        // スロットカテゴリ ("who" | "when" | "where" | "what")
+  value: string      // 選ばれた値 (例: "みんなで", "深夜に")
+  slotIndex: number  // スロット番号 (0〜3)
 }
 ```

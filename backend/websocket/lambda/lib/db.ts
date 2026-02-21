@@ -162,6 +162,15 @@ export async function updateGame(game: GameState): Promise<void> {
   );
 }
 
+export async function deleteGame(gameId: string): Promise<void> {
+  await ddb.send(
+    new DeleteCommand({
+      TableName: TABLE,
+      Key: { PK: `GAME#${gameId}`, SK: "META" },
+    })
+  );
+}
+
 // --- Roulette state ---
 
 export async function getRouletteState(): Promise<RouletteSlot[]> {

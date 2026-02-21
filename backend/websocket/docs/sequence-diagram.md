@@ -12,7 +12,7 @@ sequenceDiagram
     participant λ as Lambda
     participant DB as DynamoDB
 
-    Note over C1,DB: 1. 接続 & マッチング
+    Note over C1,DB: 1. 接続 & マッチング (ルーレット演出付き)
 
     C1->>GW: WebSocket接続
     GW->>λ: $connect
@@ -22,24 +22,37 @@ sequenceDiagram
     GW->>λ: $default
     λ->>DB: マッチング追加
     λ->>DB: 待機者を検索 (1人)
-    λ-->>C1: {"type":"waiting","waitingCount":1}
+    λ->>DB: ルーレット状態を取得
+    λ->>λ: スロット決定 (who)
+    λ->>DB: ルーレット状態を保存
+    λ-->>C1: {"type":"waiting","waitingCount":1,"decidedSlots":[...],"newSlot":{...}}
 
     C2->>GW: 接続 + join
-    λ-->>C1: {"type":"waiting","waitingCount":2}
-    λ-->>C2: {"type":"waiting","waitingCount":2}
+    λ->>DB: ルーレット状態を取得
+    λ->>λ: スロット決定 (when)
+    λ->>DB: ルーレット状態を保存
+    λ-->>C1: {"type":"waiting","waitingCount":2,...}
+    λ-->>C2: {"type":"waiting","waitingCount":2,...}
 
     C3->>GW: 接続 + join
-    λ-->>C1: {"type":"waiting","waitingCount":3}
-    λ-->>C2: {"type":"waiting","waitingCount":3}
-    λ-->>C3: {"type":"waiting","waitingCount":3}
+    λ->>λ: スロット決定 (where)
+    λ-->>C1: {"type":"waiting","waitingCount":3,...}
+    λ-->>C2: {"type":"waiting","waitingCount":3,...}
+    λ-->>C3: {"type":"waiting","waitingCount":3,...}
 
     Note over C1,DB: 2. ゲーム開始 (4人目が参加)
 
     C4->>GW: 接続 + join
     λ->>DB: 待機者を検索 (4人)
+    λ->>λ: スロット決定 (what)
+    λ-->>C1: {"type":"waiting","waitingCount":4,...}
+    λ-->>C2: {"type":"waiting","waitingCount":4,...}
+    λ-->>C3: {"type":"waiting","waitingCount":4,...}
+    λ-->>C4: {"type":"waiting","waitingCount":4,...}
     λ->>λ: デッキ作成 & シャッフル & カード配布 & ペア除去
     λ->>DB: ゲーム作成
     λ->>DB: 4人をマッチングから削除
+    λ->>DB: ルーレット状態を削除
     λ-->>C1: {"type":"game_start", "yourHand":[...], ...}
     λ-->>C2: {"type":"game_start", "yourHand":[...], ...}
     λ-->>C3: {"type":"game_start", "yourHand":[...], ...}
@@ -94,15 +107,20 @@ sequenceDiagram
     GW->>λ: $default
     λ->>DB: UPDATE CONN#{connId} (playerName設定)
     λ->>DB: PUT MATCHMAKING / CONN#{connId}
-    λ->>DB: QUERY PK=MATCHMAKING
+    λ->>DB: QUERY PK=MATCHMAKING (待機者取得)
+    λ->>DB: GET MATCHMAKING/ROULETTE (ルーレット状態取得)
+    λ->>λ: 新スロット決定 (who→when→where→what の順)
+    λ->>DB: PUT MATCHMAKING/ROULETTE (ルーレット状態保存)
 
     alt 4人未満
-        λ-->>Client: {"type":"waiting","waitingCount": N}
+        λ-->>Client: {"type":"waiting","waitingCount":N,"decidedSlots":[...],"newSlot":{...}}
     else 4人揃った
+        λ-->>Client: {"type":"waiting","waitingCount":4,...} (最終ルーレット付き)
         λ->>λ: ゲーム作成 & カード配布
         λ->>DB: PUT GAME#{gameId}
         λ->>DB: DELETE MATCHMAKING × 4
         λ->>DB: UPDATE CONN × 4 (gameId設定)
+        λ->>DB: DELETE MATCHMAKING/ROULETTE (ルーレット状態削除)
         λ-->>Client: {"type":"game_start", ...}
     end
 ```

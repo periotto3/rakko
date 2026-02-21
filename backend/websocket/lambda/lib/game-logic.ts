@@ -132,7 +132,7 @@ export function getActivePlayers(players: Player[]): number {
 }
 
 export function isGameOver(players: Player[]): boolean {
-  return getActivePlayers(players) <= 1;
+  return players.some(p => p.finishedOrder !== null);
 }
 
 export function getRankings(players: Player[]): { seatIndex: number; name: string; avatar: string; rank: number }[] {

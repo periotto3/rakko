@@ -39,12 +39,13 @@
 
 ## DynamoDB テーブル設計
 
-単一テーブル設計。PK/SKの組み合わせで3種類のレコードを管理する。
+単一テーブル設計。PK/SKの組み合わせで4種類のレコードを管理する。
 
 | レコード種別   | PK                  | SK                  | TTL    |
 | -------------- | ------------------- | ------------------- | ------ |
 | コネクション   | `CONN#<connId>`     | `CONN`              | 2時間  |
 | マッチング待機 | `MATCHMAKING`       | `CONN#<connId>`     | 2時間  |
+| ルーレット状態 | `MATCHMAKING`       | `ROULETTE`          | 2時間  |
 | ゲーム状態     | `GAME#<gameId>`     | `META`              | 2時間  |
 
 ### コネクション
@@ -68,6 +69,22 @@
   "SK": "CONN#abc123",
   "connectionId": "abc123",
   "playerName": "たろう",
+  "ttl": 1740200000
+}
+```
+
+### ルーレット状態
+
+マッチング中のテーマルーレットの確定スロットを保持する。ゲーム開始時に削除される。
+
+```json
+{
+  "PK": "MATCHMAKING",
+  "SK": "ROULETTE",
+  "slots": [
+    { "key": "who", "value": "みんなで", "slotIndex": 0 },
+    { "key": "when", "value": "深夜に", "slotIndex": 1 }
+  ],
   "ttl": 1740200000
 }
 ```
@@ -112,9 +129,10 @@ $default    → messageHandler    → アクション振り分け
 lambda/
 ├── index.ts                  # 3つのLambdaハンドラー (connect/disconnect/message)
 └── lib/
-    ├── types.ts              # 型定義 (Card, Player, GameState, メッセージ型)
+    ├── types.ts              # 型定義 (Card, Player, GameState, RouletteSlot, メッセージ型)
     ├── game-logic.ts         # ゲームロジック (デッキ, シャッフル, ペア除去, ターン管理)
-    ├── db.ts                 # DynamoDB操作
+    ├── theme-data.ts         # テーマルーレットのカテゴリ & 候補データ
+    ├── db.ts                 # DynamoDB操作 (ルーレット状態の読み書き含む)
     ├── broadcast.ts          # WebSocketメッセージ送信
     └── actions/
         ├── join.ts           # マッチング & ゲーム開始

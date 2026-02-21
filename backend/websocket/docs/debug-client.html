@@ -294,6 +294,7 @@ class PlayerPanel {
         this.updateStatus('Game Over', 'finished');
         this.renderRankings();
         this.el.classList.add('finished');
+        setTimeout(() => { if (this.ws) this.ws.close(); }, 3000);
         break;
 
       case 'error':

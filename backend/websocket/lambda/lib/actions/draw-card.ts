@@ -1,4 +1,4 @@
-import { getConnection, getGame, updateGame } from "../db";
+import { getConnection, getGame, updateGame, deleteGame, deleteConnection } from "../db";
 import { broadcastToGame, sendPersonalizedState, sendToConnection } from "../broadcast";
 import {
   drawCard,
@@ -99,13 +99,13 @@ export async function handleDrawCard(
   if (isGameOver(game.players)) {
     game.phase = "finished";
 
-    // Assign last place to remaining player
-    const loser = game.players.find(
-      (p) => p.hand.length > 0 && p.finishedOrder === null
-    );
-    if (loser) {
+    // 残りプレイヤーにカード枚数順でランク付与（少ない方が上位）
+    const remaining = game.players
+      .filter(p => p.finishedOrder === null)
+      .sort((a, b) => a.hand.length - b.hand.length);
+    for (const p of remaining) {
       game.finishedCount++;
-      loser.finishedOrder = game.finishedCount;
+      p.finishedOrder = game.finishedCount;
     }
 
     game.version++;
@@ -116,6 +116,12 @@ export async function handleDrawCard(
       type: "game_over",
       rankings,
     });
+
+    // クリーンアップ: ゲームと接続レコードを削除
+    await Promise.all([
+      deleteGame(game.gameId),
+      ...game.players.map(p => deleteConnection(p.connectionId)),
+    ]);
     return;
   }
 
