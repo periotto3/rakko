@@ -62,6 +62,15 @@ export class JoinGameUseCase {
 
     const matchedPlayers = waiting.slice(0, 4);
 
+    // Remove matched players from queue immediately to prevent race conditions
+    // (e.g., 5th player joining during image generation seeing stale queue)
+    await Promise.all([
+      ...matchedPlayers.map((w) =>
+        this.matchmakingRepo.removePlayer(w.connectionId)
+      ),
+      this.matchmakingRepo.deleteRouletteState(),
+    ]);
+
     await Promise.all(
       matchedPlayers.map((w) =>
         this.notificationService.sendToConnection(w.connectionId, {
@@ -86,7 +95,6 @@ export class JoinGameUseCase {
 
     const gameId = randomUUID();
 
-    let imageUrls: string[] = [];
     const prompt = buildPrompt(slots);
     const promptPreview =
       prompt.length > PROMPT_LOG_LIMIT
@@ -103,7 +111,7 @@ export class JoinGameUseCase {
     );
 
     try {
-      imageUrls = await this.imageGenerationService.generate(prompt, gameId);
+      const imageUrls = await this.imageGenerationService.generate(prompt, gameId);
       console.info(
         JSON.stringify({
           event: "image_generation_done",
@@ -111,70 +119,89 @@ export class JoinGameUseCase {
           imageUrlCount: imageUrls.length,
         })
       );
+
+      await Promise.all(
+        matchedPlayers.map((w) =>
+          this.notificationService.sendToConnection(w.connectionId, {
+            type: "images_ready",
+            imageUrls,
+          })
+        )
+      );
+
+      // --- Game start phase ---
+      let players: Player[] = matchedPlayers.map(
+        (w, i) =>
+          new Player(w.connectionId, w.playerName, AVATARS[i], i, [], null)
+      );
+
+      players = Deck.deal(players);
+
+      const game = new Game(gameId, "playing", players, 0, 0, 1);
+
+      await this.gameRepo.create(game);
+
+      await Promise.all(
+        matchedPlayers.map((w) =>
+          this.connectionRepo.updateGameId(w.connectionId, gameId)
+        )
+      );
+
+      const publicPlayers = players.map(
+        (p) =>
+          new PublicPlayer(
+            p.name,
+            p.avatar,
+            p.seatIndex,
+            p.hand.length,
+            p.finishedOrder
+          )
+      );
+
+      await Promise.all(
+        players.map((player) =>
+          this.notificationService.sendToConnection(player.connectionId, {
+            type: "game_start",
+            gameId,
+            yourSeatIndex: player.seatIndex,
+            yourHand: player.hand,
+            players: publicPlayers,
+            currentTurnSeat: game.currentTurnIndex,
+          })
+        )
+      );
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error(
         JSON.stringify({
-          event: "image_generation_failed",
+          event: "game_creation_failed",
           gameId,
           errorMessage,
         })
       );
-    }
 
-    await Promise.all(
-      matchedPlayers.map((w) =>
-        this.notificationService.sendToConnection(w.connectionId, {
-          type: "images_ready",
-          imageUrls,
-        })
-      )
-    );
-
-    // --- Game start phase ---
-    let players: Player[] = matchedPlayers.map(
-      (w, i) =>
-        new Player(w.connectionId, w.playerName, AVATARS[i], i, [], null)
-    );
-
-    players = Deck.deal(players);
-
-    const game = new Game(gameId, "playing", players, 0, 0, 1);
-
-    await this.gameRepo.create(game);
-
-    await Promise.all([
-      ...matchedPlayers.map((w) =>
-        this.matchmakingRepo.removePlayer(w.connectionId)
-      ),
-      ...matchedPlayers.map((w) =>
-        this.connectionRepo.updateGameId(w.connectionId, gameId)
-      ),
-      this.matchmakingRepo.deleteRouletteState(),
-    ]);
-
-    const publicPlayers = players.map(
-      (p) =>
-        new PublicPlayer(
-          p.name,
-          p.avatar,
-          p.seatIndex,
-          p.hand.length,
-          p.finishedOrder
+      // Recovery: re-add players to matchmaking queue
+      await Promise.all(
+        matchedPlayers.map((w) =>
+          this.matchmakingRepo.addPlayer(w.connectionId, w.playerName)
         )
-    );
-
-    await Promise.all(
-      players.map((player) =>
-        this.notificationService.sendToConnection(player.connectionId, {
-          type: "game_start",
+      );
+      console.info(
+        JSON.stringify({
+          event: "players_recovered_to_queue",
           gameId,
-          yourSeatIndex: player.seatIndex,
-          yourHand: player.hand,
-          players: publicPlayers,
-          currentTurnSeat: game.currentTurnIndex,
+          playerCount: matchedPlayers.length,
         })
-      )
-    );
+      );
+
+      await Promise.all(
+        matchedPlayers.map((w) =>
+          this.notificationService.sendToConnection(w.connectionId, {
+            type: "error",
+            message: "ゲームの作成に失敗しました。再度マッチングを行います。",
+          })
+        )
+      );
+    }
   }
 }
