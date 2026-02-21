@@ -19,18 +19,18 @@ interface PlayScreenProps {
 }
 
 const SUIT_SYMBOLS: Record<string, string> = {
-  spades: "\u2660",
-  hearts: "\u2665",
-  diamonds: "\u2666",
-  clubs: "\u2663",
-  joker: "\uD83C\uDCCF",
+  compute: "⚡",
+  storage: "🪣",
+  database: "🗄️",
+  network: "🌐",
+  joker: "💸",
 };
 
 const SUIT_COLORS: Record<string, string> = {
-  spades: "#1a1a2e",
-  hearts: "#dc2626",
-  diamonds: "#dc2626",
-  clubs: "#1a1a2e",
+  compute: "#E07B39",  // AWS オレンジ
+  storage: "#7AA116",  // グリーン
+  database: "#2E73B8", // ブルー
+  network: "#8C4FFF",  // パープル
   joker: "#7c3aed",
 };
 
@@ -50,9 +50,9 @@ function CardFace({ card }: { card: Card }) {
     >
       {isJoker ? (
         <>
-          <span className="text-xl leading-none">&#x1F0CF;</span>
+          <span className="text-xl leading-none">💸</span>
           <span className="text-[7px] font-bold" style={{ color: "#7c3aed" }}>
-            JOKER
+            請求書
           </span>
         </>
       ) : (
@@ -100,7 +100,7 @@ function CardBack({
       }}
     >
       <div className="w-[38px] h-[58px] rounded border border-white/20 flex items-center justify-center">
-        <span className="text-white/60 text-lg font-serif">&#x2663;</span>
+        <span className="text-white/60 text-lg">☁</span>
       </div>
     </button>
   );
@@ -345,7 +345,7 @@ export default function PlayScreen({
         result.players[currentTurnIndex].hand.length <
         players[currentTurnIndex].hand.length;
       if (isJoker) {
-        setLastDrawnInfo("ジョーカーを引いた！");
+        setLastDrawnInfo("AWSの請求書を引いた！💸");
       } else if (wasPaired) {
         setLastDrawnInfo(
           `${drawnCard.label}${SUIT_SYMBOLS[drawnCard.suit]}でペア！`

@@ -1,9 +1,28 @@
 import { Card, Suit, BabanukiPlayer, BabanukiState, ThemeSlot } from "./types";
 
-const SUITS: Suit[] = ["spades", "hearts", "diamonds", "clubs"];
-const RANK_LABELS: Record<number, string> = {
-  1: "A", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
-  8: "8", 9: "9", 10: "10", 11: "J", 12: "Q", 13: "K",
+const SUITS: Suit[] = ["compute", "storage", "database", "network"];
+
+const SUIT_RANK_LABELS: Record<Suit, Record<number, string>> = {
+  compute: {
+    1: "EC2", 2: "Lambda", 3: "ECS", 4: "EKS", 5: "Fargate",
+    6: "Batch", 7: "Lightsail", 8: "Beanstalk", 9: "AppRunner",
+    10: "Outposts", 11: "Step Fn", 12: "SAM", 13: "CDK",
+  },
+  storage: {
+    1: "S3", 2: "EBS", 3: "EFS", 4: "Glacier", 5: "FSx",
+    6: "Backup", 7: "DataSync", 8: "Transfer", 9: "Store GW",
+    10: "Snowball", 11: "S3 Select", 12: "Lake Form.", 13: "Macie",
+  },
+  database: {
+    1: "RDS", 2: "DynamoDB", 3: "E.Cache", 4: "Redshift", 5: "Aurora",
+    6: "Neptune", 7: "DocDB", 8: "Keyspaces", 9: "Timestrm.",
+    10: "QLDB", 11: "MemoryDB", 12: "RDS Proxy", 13: "DB Mgr.",
+  },
+  network: {
+    1: "VPC", 2: "C.Front", 3: "Route 53", 4: "ALB", 5: "NLB",
+    6: "API GW", 7: "Direct Con", 8: "VPN", 9: "Transit GW",
+    10: "WAF", 11: "Shield", 12: "PrvtLink", 13: "G.Acc.",
+  },
 };
 
 export function createDeck(): Card[] {
@@ -14,11 +33,11 @@ export function createDeck(): Card[] {
         id: `${suit}-${rank}`,
         suit,
         rank,
-        label: RANK_LABELS[rank],
+        label: SUIT_RANK_LABELS[suit][rank],
       });
     }
   }
-  cards.push({ id: "joker", suit: "joker", rank: 0, label: "JOKER" });
+  cards.push({ id: "joker", suit: "joker", rank: 0, label: "請求書" });
   return cards;
 }
 
