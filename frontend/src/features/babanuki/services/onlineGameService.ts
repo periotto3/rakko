@@ -61,6 +61,9 @@ export class OnlineGameService implements GameService {
     this.send({ action: "draw_card", cardIndex });
   }
 
+  // サーバー主導でゲームが開始されるため、クライアント側では何もしない
+  startGame(): void {}
+
   dispose(): void {
     if (this.ws) {
       this.ws.onopen = null;

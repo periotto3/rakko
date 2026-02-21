@@ -42,6 +42,8 @@ export interface RankingData {
 export interface GameService {
   /** ゲームに参加する（接続〜マッチング開始） */
   join(playerName: string): void;
+  /** ゲームを開始する（CPUモード: カード配布+開始, オンライン: no-op） */
+  startGame(): void;
   /** カードを引く（自分のターン時のみ有効） */
   drawCard(cardIndex: number): void;
 

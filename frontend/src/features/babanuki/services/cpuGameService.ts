@@ -17,9 +17,9 @@ import {
 } from "./gameService";
 
 const CPU_PLAYERS = [
-  { id: "cpu1", name: "Aさん", avatar: "🐱" },
-  { id: "cpu2", name: "Bさん", avatar: "🐶" },
-  { id: "cpu3", name: "Cさん", avatar: "🐰" },
+  { id: "cpu1", name: "Aさん", avatar: "/avatars/cpu_1.png" },
+  { id: "cpu2", name: "Bさん", avatar: "/avatars/cpu_2.png" },
+  { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png" },
 ];
 
 // 各プレイヤーが「参加」するまでの遅延（ms）
@@ -31,6 +31,7 @@ const JOIN_DELAYS = [500, 3000, 5500, 8000];
  */
 export class CpuGameService implements GameService {
   private players: BabanukiPlayer[] = [];
+  private pendingPlayers: BabanukiPlayer[] | undefined;
   private currentTurnIndex = 0;
   private targetIndex = 0;
   private finishedCount = 0;
@@ -54,38 +55,39 @@ export class CpuGameService implements GameService {
 
   join(playerName: string): void {
     const allPlayers: BabanukiPlayer[] = [
-      { id: "human", name: playerName, avatar: "😊", isCPU: false, hand: [], finishedOrder: null },
+      { id: "human", name: playerName, avatar: "/avatars/user.png", isCPU: false, hand: [], finishedOrder: null },
       ...CPU_PLAYERS.map((c) => ({ ...c, isCPU: true, hand: [], finishedOrder: null })),
     ];
+    this.pendingPlayers = allPlayers;
 
-    // プレイヤーが1人ずつ参加する演出をシミュレート
+    // プレイヤーが1人ずつ参加する演出をシミュレート（onWaiting のみ発火）
     allPlayers.forEach((_, i) => {
       const timer = setTimeout(() => {
-        if (i < allPlayers.length - 1) {
-          // まだ全員揃っていない → waiting
-          this.waitingCb?.(i + 1);
-        } else {
-          // 4人目が参加 → ゲーム開始
-          this.players = dealCards(allPlayers);
-          this.currentTurnIndex = 0;
-          this.targetIndex = getDrawTarget(this.players, 0);
-          this.finishedCount = 0;
-          this.isRunning = true;
-
-          this.gameStartCb?.({
-            yourSeatIndex: this.mySeatIndex,
-            yourHand: [...this.players[this.mySeatIndex].hand],
-            players: this.buildPublicPlayers(),
-            currentTurnSeat: this.currentTurnIndex,
-          });
-
-          if (this.players[this.currentTurnIndex].isCPU) {
-            this.scheduleCpuTurn();
-          }
-        }
+        this.waitingCb?.(i + 1);
       }, JOIN_DELAYS[i]);
       this.timers.push(timer);
     });
+  }
+
+  startGame(): void {
+    if (!this.pendingPlayers) return;
+    this.players = dealCards(this.pendingPlayers);
+    this.pendingPlayers = undefined;
+    this.currentTurnIndex = 0;
+    this.targetIndex = getDrawTarget(this.players, 0);
+    this.finishedCount = 0;
+    this.isRunning = true;
+
+    this.gameStartCb?.({
+      yourSeatIndex: this.mySeatIndex,
+      yourHand: [...this.players[this.mySeatIndex].hand],
+      players: this.buildPublicPlayers(),
+      currentTurnSeat: this.currentTurnIndex,
+    });
+
+    if (this.players[this.currentTurnIndex].isCPU) {
+      this.scheduleCpuTurn();
+    }
   }
 
   drawCard(cardIndex: number): void {
