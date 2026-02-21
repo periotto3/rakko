@@ -77,18 +77,7 @@ export class DrawCardUseCase {
     });
 
     if (isGameOver(updatedGame.players)) {
-      let players = [...updatedGame.players];
-      let finishedCount = updatedGame.finishedCount;
-
-      const loserIndex = players.findIndex(
-        (p) => p.hand.length > 0 && p.finishedOrder === null
-      );
-      if (loserIndex !== -1) {
-        finishedCount++;
-        players[loserIndex] = players[loserIndex].withFinishedOrder(finishedCount);
-      }
-
-      updatedGame = updatedGame.finish(players, finishedCount);
+      updatedGame = updatedGame.finish(updatedGame.players, updatedGame.finishedCount);
       await this.gameRepo.update(updatedGame);
 
       const rankings = getRankings(updatedGame.players);

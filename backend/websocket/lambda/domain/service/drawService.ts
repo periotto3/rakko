@@ -96,18 +96,21 @@ export function getActivePlayers(players: Player[]): number {
 }
 
 export function isGameOver(players: Player[]): boolean {
-  return getActivePlayers(players) <= 1;
+  return players.some(p => p.finishedOrder !== null);
 }
 
 export function getRankings(players: Player[]): Ranking[] {
-  const sorted = [...players].sort((a, b) => {
-    if (a.finishedOrder !== null && b.finishedOrder !== null) {
-      return a.finishedOrder - b.finishedOrder;
-    }
-    if (a.finishedOrder !== null) return -1;
-    if (b.finishedOrder !== null) return 1;
-    return a.hand.length - b.hand.length;
-  });
+  const finished = players
+    .filter(p => p.finishedOrder !== null)
+    .sort((a, b) => a.finishedOrder! - b.finishedOrder!);
+
+  const remaining = players.filter(p => p.finishedOrder === null);
+  const hasJoker = (p: Player) => p.hand.some(c => c.suit === "joker");
+
+  const nonJoker = remaining.filter(p => !hasJoker(p)).sort((a, b) => a.hand.length - b.hand.length);
+  const jokerHolders = remaining.filter(p => hasJoker(p));
+
+  const sorted = [...finished, ...nonJoker, ...jokerHolders];
 
   return sorted.map((p, i) =>
     new Ranking(p.seatIndex, p.name, p.avatar, i + 1)
