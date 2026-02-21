@@ -15,7 +15,7 @@ import {
 import type { GameMode } from "@/features/babanuki";
 import { CpuGameService } from "@/features/babanuki/services/cpuGameService";
 import { OnlineGameService } from "@/features/babanuki/services/onlineGameService";
-import type { GameService } from "@/features/babanuki/services/gameService";
+import type { GameService, GameStartData } from "@/features/babanuki/services/gameService";
 
 const MAX_PLAYERS = 4;
 
@@ -27,6 +27,8 @@ export default function BabanukiPage() {
   const [finalPlayers, setFinalPlayers] = useState<BabanukiPlayer[]>([]);
   const [backgroundImage, setBackgroundImage] = useState<string>("");
   const [gameService, setGameService] = useState<GameService | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>("cpu");
+  const [gameStartData, setGameStartData] = useState<GameStartData | null>(null);
   const cpuJoinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Cleanup timers on unmount
@@ -42,6 +44,7 @@ export default function BabanukiPage() {
 
     const service = mode === "online" ? new OnlineGameService() : new CpuGameService();
     setGameService(service);
+    setGameMode(mode);
 
     setPlayers([]);
     setPhase("waiting");
@@ -74,6 +77,14 @@ export default function BabanukiPage() {
     setPhase("generating");
   }, []);
 
+  // オンラインモード：game_start 受信時（WaitingScreen から呼ばれる）
+  const handleOnlineGameStart = useCallback((data: GameStartData) => {
+    setGameStartData(data);
+    // オンラインはテーマルーレット・画像生成をスキップして直接 playing へ
+    setTheme({ work: "", when: "", where: "", style: "" });
+    setPhase("playing");
+  }, []);
+
   const handleGenerationComplete = useCallback((imageUrl: string) => {
     setBackgroundImage(imageUrl);
     setPlayers((prev) => dealCards(prev));
@@ -99,8 +110,9 @@ export default function BabanukiPage() {
     setWinner(null);
     setFinalPlayers([]);
     setBackgroundImage("");
+    setGameStartData(null);
     setPhase("title");
-  }, []);
+  }, [gameService]);
 
   switch (phase) {
     case "title":
@@ -109,9 +121,12 @@ export default function BabanukiPage() {
     case "waiting":
       return (
         <WaitingScreen
+          mode={gameMode}
+          gameService={gameService!}
           players={players}
           maxPlayers={MAX_PLAYERS}
           onThemeDecided={handleThemeDecided}
+          onGameStart={handleOnlineGameStart}
         />
       );
 

@@ -8,11 +8,18 @@ import {
   THEME_WHERE,
   THEME_STYLE,
 } from "../lib/engine";
+import type { GameMode } from "./TitleScreen";
+import type { GameService, GameStartData } from "../services/gameService";
 
 interface WaitingScreenProps {
-  players: BabanukiPlayer[];
+  mode: GameMode;
+  gameService: GameService;
   maxPlayers: number;
+  // CPU モード専用
+  players: BabanukiPlayer[];
   onThemeDecided: (theme: ThemeSlot) => void;
+  // オンラインモード専用
+  onGameStart: (data: GameStartData) => void;
 }
 
 const SLOT_KEYS: (keyof ThemeSlot)[] = ["work", "when", "where", "style"];
@@ -84,10 +91,22 @@ function SlotReel({
 }
 
 export default function WaitingScreen({
+  mode,
+  gameService,
   players,
   maxPlayers,
   onThemeDecided,
+  onGameStart,
 }: WaitingScreenProps) {
+  // オンラインモード用：待機人数
+  const [waitingCount, setWaitingCount] = useState(1);
+
+  // オンラインモード：gameService のコールバックを登録
+  useEffect(() => {
+    if (mode !== "online") return;
+    gameService.onWaiting((count) => setWaitingCount(count));
+    gameService.onGameStart((data) => onGameStart(data));
+  }, [mode, gameService, onGameStart]);
   const [nextSlotIndex, setNextSlotIndex] = useState(0);
   const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeSlot>({
@@ -125,6 +144,50 @@ export default function WaitingScreen({
   const allJoined = players.length >= maxPlayers;
   const allSlotsLocked = nextSlotIndex >= SLOT_KEYS.length;
 
+  // オンラインモード：シンプルな待機画面
+  if (mode === "online") {
+    const AVATARS = ["😊", "🐱", "🐶", "🐰"];
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+        <h1 className="text-3xl font-bold mb-2">
+          {waitingCount >= maxPlayers ? "全員そろいました！" : `マッチング中...`}
+        </h1>
+        <p className="text-gray-500 mb-8">{waitingCount}/{maxPlayers}人が待機中</p>
+
+        <div className="flex gap-4 mb-10">
+          {Array.from({ length: maxPlayers }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center">
+              <span className={`text-4xl transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}>
+                {AVATARS[i]}
+              </span>
+              <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
+                {i < waitingCount ? "参加済" : "待機中"}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2 mb-8">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-3 h-3 rounded-full bg-blue-500 animate-bounce"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-xl text-sm transition-all"
+        >
+          キャンセル
+        </button>
+      </div>
+    );
+  }
+
+  // CPUモード：既存のテーマルーレットUI
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
       <h1 className="text-3xl font-bold mb-2">
