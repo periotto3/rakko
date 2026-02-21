@@ -46,6 +46,7 @@ export class JoinGameUseCase {
           this.notificationService.sendToConnection(w.connectionId, {
             type: "waiting",
             waitingCount: waiting.length,
+            playerNames: waiting.map((p) => p.playerName),
             decidedSlots: slots,
             newSlot,
             slotCandidates: THEME_ITEMS,
@@ -62,6 +63,7 @@ export class JoinGameUseCase {
         this.notificationService.sendToConnection(w.connectionId, {
           type: "waiting",
           waitingCount: 4,
+          playerNames: matchedPlayers.map((p) => p.playerName),
           decidedSlots: slots,
           newSlot,
           slotCandidates: THEME_ITEMS,

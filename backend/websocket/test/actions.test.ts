@@ -91,6 +91,7 @@ describe("JoinGameUseCase", () => {
     expect(messages[0].connectionId).toBe("conn-0");
     expect(messages[0].data.type).toBe("waiting");
     expect(messages[0].data.waitingCount).toBe(1);
+    expect(messages[0].data.playerNames).toEqual(["Alice"]);
     expect(messages[0].data.decidedSlots).toHaveLength(1);
     expect(messages[0].data.decidedSlots[0].key).toBe("who");
     expect(messages[0].data.newSlot.key).toBe("who");
@@ -124,6 +125,7 @@ describe("JoinGameUseCase", () => {
     for (const msg of messages) {
       expect(msg.data.type).toBe("waiting");
       expect(msg.data.waitingCount).toBe(3);
+      expect(msg.data.playerNames).toEqual(["Alice", "Bob", "Charlie"]);
       expect(msg.data.decidedSlots).toHaveLength(3);
       expect(msg.data.newSlot.key).toBe("where");
       expect(msg.data.slotCandidates).toBeDefined();

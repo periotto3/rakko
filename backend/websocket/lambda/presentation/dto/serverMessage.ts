@@ -8,6 +8,7 @@ export type ServerMessage =
   | {
       type: "waiting";
       waitingCount: number;
+      playerNames: string[];
       decidedSlots: RouletteSlot[];
       newSlot: RouletteSlot | null;
       slotCandidates: Record<string, string[]>;

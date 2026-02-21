@@ -7,7 +7,7 @@ const RANK_LABELS: Record<number, string> = {
   8: "8", 9: "9", 10: "10", 11: "J", 12: "Q", 13: "K",
 };
 
-const DECK_RANK_COUNT = 6;
+const DECK_RANK_COUNT = 8;
 
 export function createDeck(): Card[] {
   const allRanks = Array.from({ length: 13 }, (_, i) => i + 1);

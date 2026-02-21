@@ -41,17 +41,17 @@ function makePlayer(
 }
 
 describe("createDeck", () => {
-  it("should generate 25 cards (6 ranks × 4 suits + joker)", () => {
+  it("should generate 33 cards (8 ranks × 4 suits + joker)", () => {
     const deck = createDeck();
-    expect(deck).toHaveLength(25);
+    expect(deck).toHaveLength(33);
   });
 
-  it("should have 6 cards per suit", () => {
+  it("should have 8 cards per suit", () => {
     const deck = createDeck();
     const suits = ["spades", "hearts", "diamonds", "clubs"];
     for (const suit of suits) {
       const suitCards = deck.filter((c) => c.suit === suit);
-      expect(suitCards).toHaveLength(6);
+      expect(suitCards).toHaveLength(8);
     }
   });
 
@@ -66,10 +66,10 @@ describe("createDeck", () => {
   it("should have unique IDs for all cards", () => {
     const deck = createDeck();
     const ids = new Set(deck.map((c) => c.id));
-    expect(ids.size).toBe(25);
+    expect(ids.size).toBe(33);
   });
 
-  it("should use the same 6 ranks across all suits", () => {
+  it("should use the same 8 ranks across all suits", () => {
     const deck = createDeck();
     const suits = ["spades", "hearts", "diamonds", "clubs"];
     const ranksBySuit = suits.map(
@@ -84,7 +84,7 @@ describe("createDeck", () => {
   it("should select ranks from 1-13", () => {
     const deck = createDeck();
     const ranks = new Set(deck.filter((c) => c.suit !== "joker").map((c) => c.rank));
-    expect(ranks.size).toBe(6);
+    expect(ranks.size).toBe(8);
     for (const rank of ranks) {
       expect(rank).toBeGreaterThanOrEqual(1);
       expect(rank).toBeLessThanOrEqual(13);
