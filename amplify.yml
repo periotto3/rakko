@@ -8,6 +8,7 @@ applications:
             - npm ci
         build:
           commands:
+            - env | grep -e NEXT_PUBLIC_ >> .env.production || true
             - npm run build
       artifacts:
         baseDirectory: .next
@@ -16,6 +17,3 @@ applications:
       cache:
         paths:
           - node_modules/**/*
-      environment:
-        variables:
-          NEXT_PUBLIC_WEBSOCKET_ORIGIN: "wss://your-websocket-server.example.com"
