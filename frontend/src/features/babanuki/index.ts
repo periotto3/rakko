@@ -8,4 +8,5 @@ export { default as PlayScreen } from "./components/PlayScreen";
 export { default as ResultScreen } from "./components/ResultScreen";
 
 export type { BabanukiPlayer, ThemeSlot, GamePhase } from "./lib/types";
+export type { GameMode } from "./components/TitleScreen";
 export { dealCards } from "./lib/engine";
