@@ -1,10 +1,11 @@
-export type Suit = "spades" | "hearts" | "diamonds" | "clubs";
+export type Suit = "compute" | "storage" | "database" | "network";
 
 export interface Card {
   id: string;
   suit: Suit | "joker";
   rank: number; // 1-13, 0 for joker
-  label: string; // "A", "2"..."K", "JOKER"
+  label: string; // AWSサービス名 or "請求書"
+  imageUrl: string; // AWSアイコン画像URL
 }
 
 export interface BabanukiPlayer {

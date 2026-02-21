@@ -1,24 +1,13 @@
 import { Card, Suit, BabanukiPlayer, BabanukiState, ThemeSlot } from "./types";
-
-const SUITS: Suit[] = ["spades", "hearts", "diamonds", "clubs"];
-const RANK_LABELS: Record<number, string> = {
-  1: "A", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
-  8: "8", 9: "9", 10: "10", 11: "J", 12: "Q", 13: "K",
-};
+import { AWS_SERVICES, JOKER_IMAGE_URL } from "./constants";
 
 export function createDeck(): Card[] {
   const cards: Card[] = [];
-  for (const suit of SUITS) {
-    for (let rank = 1; rank <= 13; rank++) {
-      cards.push({
-        id: `${suit}-${rank}`,
-        suit,
-        rank,
-        label: RANK_LABELS[rank],
-      });
-    }
+  for (const svc of AWS_SERVICES) {
+    cards.push({ id: `${svc.rank}-a`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
+    cards.push({ id: `${svc.rank}-b`, suit: svc.suit, rank: svc.rank, label: svc.label, imageUrl: svc.imageUrl });
   }
-  cards.push({ id: "joker", suit: "joker", rank: 0, label: "JOKER" });
+  cards.push({ id: "joker", suit: "joker", rank: 0, label: "請求書", imageUrl: JOKER_IMAGE_URL });
   return cards;
 }
 
