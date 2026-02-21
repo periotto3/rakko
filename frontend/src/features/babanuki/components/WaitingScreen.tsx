@@ -10,7 +10,7 @@ import {
   THEME_STYLE,
 } from "../lib/engine";
 import type { GameMode } from "./TitleScreen";
-import type { GameService, GameStartData } from "../services/gameService";
+import type { GameService } from "../services/gameService";
 
 interface WaitingScreenProps {
   mode: GameMode;
@@ -19,8 +19,6 @@ interface WaitingScreenProps {
   // CPU モード専用
   players: BabanukiPlayer[];
   onThemeDecided: (theme: ThemeSlot) => void;
-  // オンラインモード専用
-  onGameStart: (data: GameStartData) => void;
 }
 
 const SLOT_KEYS: (keyof ThemeSlot)[] = ["work", "when", "where", "style"];
@@ -97,17 +95,15 @@ export default function WaitingScreen({
   players,
   maxPlayers,
   onThemeDecided,
-  onGameStart,
 }: WaitingScreenProps) {
   // オンラインモード用：待機人数
   const [waitingCount, setWaitingCount] = useState(1);
 
-  // オンラインモード：gameService のコールバックを登録
+  // オンラインモード：onWaiting のみ購読（onGameStart は page.tsx で管理）
   useEffect(() => {
     if (mode !== "online") return;
     gameService.onWaiting((count) => setWaitingCount(count));
-    gameService.onGameStart((data) => onGameStart(data));
-  }, [mode, gameService, onGameStart]);
+  }, [mode, gameService]);
   const [nextSlotIndex, setNextSlotIndex] = useState(0);
   const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeSlot>({

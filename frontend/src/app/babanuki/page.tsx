@@ -130,7 +130,6 @@ export default function BabanukiPage() {
           players={players}
           maxPlayers={MAX_PLAYERS}
           onThemeDecided={handleThemeDecided}
-          onGameStart={handleOnlineGameStart}
         />
       );
 
