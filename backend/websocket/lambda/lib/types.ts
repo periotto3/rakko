@@ -16,6 +16,12 @@ export interface Player {
   finishedOrder: number | null;
 }
 
+export interface RouletteSlot {
+  key: string;
+  value: string;
+  slotIndex: number;
+}
+
 export type GamePhase = "waiting" | "playing" | "finished";
 
 export interface GameState {
@@ -35,7 +41,13 @@ export type ClientMessage =
 
 // Server → Client
 export type ServerMessage =
-  | { type: "waiting"; waitingCount: number }
+  | {
+      type: "waiting";
+      waitingCount: number;
+      decidedSlots: RouletteSlot[];
+      newSlot: RouletteSlot | null;
+      slotCandidates: Record<string, string[]>;
+    }
   | {
       type: "game_start";
       gameId: string;

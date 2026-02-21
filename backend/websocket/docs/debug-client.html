@@ -81,6 +81,18 @@
   .action-bar { padding: 4px 12px; flex-shrink: 0; display: flex; gap: 6px; }
   .action-bar button { padding: 4px 10px; border-radius: 4px; border: 1px solid #0f3460; background: #1a1a2e; color: #aaa; cursor: pointer; font-size: 11px; }
   .action-bar button:hover { background: #0f3460; color: #eee; }
+
+  /* Roulette slots */
+  .roulette-area { padding: 8px 12px; flex-shrink: 0; }
+  .roulette-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .roulette-slots { display: flex; gap: 6px; flex-wrap: wrap; }
+  .roulette-slot { padding: 4px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #0f3460; background: #1a1a2e; }
+  .roulette-slot.decided { background: #0f3460; color: #fff; }
+  .roulette-slot.new { background: #e94560; color: #fff; animation: slotPulse 0.6s ease-in-out; }
+  .roulette-slot.pending { color: #555; border-style: dashed; }
+  .roulette-slot.spinning { background: #2c2c4a; color: #ddd; border-color: #e94560; animation: spinGlow 0.3s ease-in-out infinite alternate; }
+  @keyframes slotPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  @keyframes spinGlow { 0% { border-color: #e94560; text-shadow: 0 0 4px rgba(233,69,96,0.5); } 100% { border-color: #f39c12; text-shadow: 0 0 4px rgba(243,156,18,0.5); } }
 </style>
 </head>
 <body>
@@ -95,6 +107,7 @@ const PANEL_COUNT = 4;
 const DEFAULT_NAMES = ['Alice', 'Bob', 'Charlie', 'Diana'];
 const SUIT_SYMBOLS = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣', joker: '🃏' };
 const MEDALS = ['🥇', '🥈', '🥉', '💀'];
+const SLOT_LABELS = { who: 'だれが', when: 'いつ', where: 'どこで', what: 'なにを' };
 
 class PlayerPanel {
   constructor(index) {
@@ -107,6 +120,8 @@ class PlayerPanel {
     this.currentTurnSeat = -1;
     this.rankings = null;
     this.drawTargetSeat = null;
+    this.spinIntervals = {};   // key -> intervalId for spinning slots
+    this.slotCandidates = {};  // key -> string[] from server
     this.buildDOM();
   }
 
@@ -124,6 +139,10 @@ class PlayerPanel {
       <div class="panel-status">
         <span class="status-text">Disconnected</span>
         <span class="badge badge-disconnected">--</span>
+      </div>
+      <div class="roulette-area" style="display:none;">
+        <div class="roulette-label">Theme Roulette</div>
+        <div class="roulette-slots"></div>
       </div>
       <div class="hand-area">
         <div class="hand-label">My Hand</div>
@@ -152,6 +171,8 @@ class PlayerPanel {
     this.othersArea = panel.querySelector('.others-area');
     this.getStateBtn = panel.querySelector('.get-state-btn');
     this.rankingsContainer = panel.querySelector('.rankings-container');
+    this.rouletteArea = panel.querySelector('.roulette-area');
+    this.rouletteSlotsEl = panel.querySelector('.roulette-slots');
     this.logEl = panel.querySelector('.log');
     this.clearLogBtn = panel.querySelector('.clear-log-btn');
 
@@ -226,10 +247,14 @@ class PlayerPanel {
     switch (msg.type) {
       case 'waiting':
         this.state = 'waiting';
+        if (msg.slotCandidates) this.slotCandidates = msg.slotCandidates;
         this.updateStatus(`Waiting (${msg.waitingCount}/4)`, 'waiting');
+        this.renderRoulette(msg.decidedSlots || [], msg.newSlot);
         break;
 
       case 'game_start':
+        Object.values(this.spinIntervals).forEach(id => clearInterval(id));
+        this.spinIntervals = {};
         this.state = 'playing';
         this.seatIndex = msg.yourSeatIndex;
         this.hand = msg.yourHand;
@@ -392,6 +417,47 @@ class PlayerPanel {
     this.rankingsContainer.appendChild(div);
   }
 
+  renderRoulette(decidedSlots, newSlot) {
+    this.rouletteArea.style.display = '';
+    // DOM再構築前に全intervalをクリア
+    Object.values(this.spinIntervals).forEach(id => clearInterval(id));
+    this.spinIntervals = {};
+    this.rouletteSlotsEl.innerHTML = '';
+    const allKeys = ['who', 'when', 'where', 'what'];
+
+    allKeys.forEach(key => {
+      const slot = decidedSlots.find(s => s.key === key);
+      const el = document.createElement('span');
+      el.dataset.key = key;
+
+      if (slot) {
+        // This slot is decided — stop any spin and show confirmed value
+        if (this.spinIntervals[key]) {
+          clearInterval(this.spinIntervals[key]);
+          delete this.spinIntervals[key];
+        }
+        const isNew = newSlot && newSlot.key === key;
+        el.className = `roulette-slot ${isNew ? 'new' : 'decided'}`;
+        el.textContent = `${SLOT_LABELS[key]}: ${slot.value}`;
+      } else {
+        // Pending slot — start spinning if candidates available and not already spinning
+        el.className = 'roulette-slot spinning';
+        const candidates = this.slotCandidates[key];
+        if (candidates && candidates.length > 0) {
+          el.textContent = `${SLOT_LABELS[key]}: ${candidates[0]}`;
+          let idx = 0;
+          this.spinIntervals[key] = setInterval(() => {
+            idx = (idx + 1) % candidates.length;
+            el.textContent = `${SLOT_LABELS[key]}: ${candidates[idx]}`;
+          }, 50);
+        } else {
+          el.textContent = `${SLOT_LABELS[key]}: ???`;
+        }
+      }
+      this.rouletteSlotsEl.appendChild(el);
+    });
+  }
+
   log(text, type = '') {
     const entry = document.createElement('div');
     entry.className = `log-entry ${type}`;
@@ -408,6 +474,10 @@ class PlayerPanel {
   }
 
   resetUI() {
+    // Clear all spin intervals
+    Object.values(this.spinIntervals).forEach(id => clearInterval(id));
+    this.spinIntervals = {};
+    this.slotCandidates = {};
     this.ws = null;
     this.state = 'disconnected';
     this.seatIndex = null;
@@ -423,6 +493,8 @@ class PlayerPanel {
     this.myHand.innerHTML = '';
     this.othersArea.innerHTML = '';
     this.rankingsContainer.innerHTML = '';
+    this.rouletteArea.style.display = 'none';
+    this.rouletteSlotsEl.innerHTML = '';
     this.updateStatus('Disconnected', 'disconnected');
     this.el.classList.remove('my-turn', 'finished');
   }

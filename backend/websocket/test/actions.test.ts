@@ -56,16 +56,21 @@ describe("handleJoin", () => {
     ddbMock.on(QueryCommand).resolves({
       Items: [{ connectionId: "conn-0", playerName: "Alice" }],
     });
+    // getRouletteState → no existing state
+    ddbMock.on(GetCommand).resolves({});
 
     await handleJoin(ENDPOINT, "conn-0", "Alice");
 
     const messages = getSentMessages();
     expect(messages).toHaveLength(1);
     expect(messages[0].connectionId).toBe("conn-0");
-    expect(messages[0].data).toEqual({
-      type: "waiting",
-      waitingCount: 1,
-    });
+    expect(messages[0].data.type).toBe("waiting");
+    expect(messages[0].data.waitingCount).toBe(1);
+    expect(messages[0].data.decidedSlots).toHaveLength(1);
+    expect(messages[0].data.decidedSlots[0].key).toBe("who");
+    expect(messages[0].data.newSlot.key).toBe("who");
+    expect(messages[0].data.slotCandidates).toBeDefined();
+    expect(messages[0].data.slotCandidates.who).toBeInstanceOf(Array);
   });
 
   it("should notify all waiting players of updated count", async () => {
@@ -77,6 +82,13 @@ describe("handleJoin", () => {
         { connectionId: "conn-2", playerName: "Charlie" },
       ],
     });
+    // 2 slots already decided from previous joins
+    ddbMock.on(GetCommand).resolves({
+      Item: { slots: [
+        { key: "who", value: "みんなで", slotIndex: 0 },
+        { key: "when", value: "深夜に", slotIndex: 1 },
+      ] },
+    });
 
     await handleJoin(ENDPOINT, "conn-2", "Charlie");
 
@@ -86,6 +98,10 @@ describe("handleJoin", () => {
     for (const msg of messages) {
       expect(msg.data.type).toBe("waiting");
       expect(msg.data.waitingCount).toBe(3);
+      expect(msg.data.decidedSlots).toHaveLength(3);
+      expect(msg.data.newSlot.key).toBe("where");
+      expect(msg.data.slotCandidates).toBeDefined();
+      expect(Object.keys(msg.data.slotCandidates)).toHaveLength(4);
     }
   });
 
@@ -101,14 +117,25 @@ describe("handleJoin", () => {
         { connectionId: "conn-3", playerName: "Dave" },
       ],
     });
+    // 3 slots already decided from previous joins
+    ddbMock.on(GetCommand).resolves({
+      Item: { slots: [
+        { key: "who", value: "みんなで", slotIndex: 0 },
+        { key: "when", value: "深夜に", slotIndex: 1 },
+        { key: "where", value: "海辺で", slotIndex: 2 },
+      ] },
+    });
 
     await handleJoin(ENDPOINT, "conn-3", "Dave");
 
     const messages = getSentMessages();
-    // Each of the 4 players should receive a game_start message
-    expect(messages).toHaveLength(4);
-    for (const msg of messages) {
-      expect(msg.data.type).toBe("game_start");
+    // 4 waiting messages + 4 game_start messages
+    const waitingMsgs = messages.filter((m) => m.data.type === "waiting");
+    const gameStartMsgs = messages.filter((m) => m.data.type === "game_start");
+    expect(waitingMsgs).toHaveLength(4);
+    expect(gameStartMsgs).toHaveLength(4);
+
+    for (const msg of gameStartMsgs) {
       expect(msg.data.gameId).toBeDefined();
       expect(msg.data.yourSeatIndex).toBeDefined();
       expect(msg.data.yourHand).toBeDefined();
@@ -117,7 +144,7 @@ describe("handleJoin", () => {
     }
 
     // Each player should receive their own unique hand
-    const hands = messages.map((m) => m.data.yourHand);
+    const hands = gameStartMsgs.map((m) => m.data.yourHand);
     const handSets = hands.map((h: Card[]) =>
       new Set(h.map((c: Card) => c.id))
     );
@@ -128,7 +155,7 @@ describe("handleJoin", () => {
         expect(overlap).toHaveLength(0);
       }
     }
-  });
+  }, 10000);
 
   it("should remove matched players from matchmaking", async () => {
     ddbMock.on(PutCommand).resolves({});
@@ -142,13 +169,21 @@ describe("handleJoin", () => {
         { connectionId: "conn-3", playerName: "Dave" },
       ],
     });
+    // 3 slots already decided
+    ddbMock.on(GetCommand).resolves({
+      Item: { slots: [
+        { key: "who", value: "みんなで", slotIndex: 0 },
+        { key: "when", value: "深夜に", slotIndex: 1 },
+        { key: "where", value: "海辺で", slotIndex: 2 },
+      ] },
+    });
 
     await handleJoin(ENDPOINT, "conn-3", "Dave");
 
-    // Should have called DeleteCommand 4 times (removeFromMatchmaking for each)
+    // Should have called DeleteCommand 5 times (4 removeFromMatchmaking + 1 deleteRouletteState)
     const deleteCalls = ddbMock.commandCalls(DeleteCommand);
-    expect(deleteCalls).toHaveLength(4);
-  });
+    expect(deleteCalls).toHaveLength(5);
+  }, 10000);
 });
 
 describe("handleDrawCard", () => {

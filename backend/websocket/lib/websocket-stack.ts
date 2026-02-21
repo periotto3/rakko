@@ -53,6 +53,7 @@ export class WebsocketStack extends cdk.Stack {
       runtime: Runtime.NODEJS_22_X,
       bundling,
       environment,
+      timeout: cdk.Duration.seconds(10),
     });
 
     // Grant DynamoDB access to all Lambdas

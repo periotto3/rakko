@@ -7,7 +7,7 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { GameState } from "./types";
+import { GameState, RouletteSlot } from "./types";
 
 const client = new DynamoDBClient({});
 const ddb = DynamoDBDocumentClient.from(client);
@@ -112,8 +112,8 @@ export async function getWaitingPlayers(): Promise<
   const result = await ddb.send(
     new QueryCommand({
       TableName: TABLE,
-      KeyConditionExpression: "PK = :pk",
-      ExpressionAttributeValues: { ":pk": "MATCHMAKING" },
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :conn)",
+      ExpressionAttributeValues: { ":pk": "MATCHMAKING", ":conn": "CONN#" },
     })
   );
   return (result.Items ?? []) as any[];
@@ -158,6 +158,41 @@ export async function updateGame(game: GameState): Promise<void> {
       },
       ConditionExpression: "version = :v",
       ExpressionAttributeValues: { ":v": previousVersion },
+    })
+  );
+}
+
+// --- Roulette state ---
+
+export async function getRouletteState(): Promise<RouletteSlot[]> {
+  const result = await ddb.send(
+    new GetCommand({
+      TableName: TABLE,
+      Key: { PK: "MATCHMAKING", SK: "ROULETTE" },
+    })
+  );
+  return (result.Item as any)?.slots ?? [];
+}
+
+export async function saveRouletteState(slots: RouletteSlot[]): Promise<void> {
+  await ddb.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: {
+        PK: "MATCHMAKING",
+        SK: "ROULETTE",
+        slots,
+        ttl: ttl(),
+      },
+    })
+  );
+}
+
+export async function deleteRouletteState(): Promise<void> {
+  await ddb.send(
+    new DeleteCommand({
+      TableName: TABLE,
+      Key: { PK: "MATCHMAKING", SK: "ROULETTE" },
     })
   );
 }

@@ -3,6 +3,8 @@ import {
   saveConnection,
   deleteConnection,
   removeFromMatchmaking,
+  getWaitingPlayers,
+  deleteRouletteState,
 } from "./lib/db";
 import { handleJoin } from "./lib/actions/join";
 import { handleDrawCard } from "./lib/actions/draw-card";
@@ -26,6 +28,11 @@ export async function disconnectHandler(
 
   await removeFromMatchmaking(connectionId);
   await deleteConnection(connectionId);
+
+  const remaining = await getWaitingPlayers();
+  if (remaining.length === 0) {
+    await deleteRouletteState();
+  }
 
   return { statusCode: 200, body: "Disconnected" };
 }
