@@ -149,9 +149,9 @@ export function createInitialState(): BabanukiState {
 }
 
 const CPU_PLAYERS = [
-  { id: "cpu1", name: "Aさん", avatar: "🐱" },
-  { id: "cpu2", name: "Bさん", avatar: "🐶" },
-  { id: "cpu3", name: "Cさん", avatar: "🐰" },
+  { id: "cpu1", name: "Aさん", avatar: "/avatars/cpu_1.png" },
+  { id: "cpu2", name: "Bさん", avatar: "/avatars/cpu_2.png" },
+  { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png" },
 ];
 
 export function createPlayers(playerCount: number): BabanukiPlayer[] {
@@ -161,7 +161,7 @@ export function createPlayers(playerCount: number): BabanukiPlayer[] {
     isCPU: false,
     hand: [],
     finishedOrder: null,
-    avatar: "😊",
+    avatar: "",
   };
   const cpus = CPU_PLAYERS.slice(0, playerCount - 1).map((c) => ({
     ...c,

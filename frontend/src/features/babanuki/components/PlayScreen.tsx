@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BabanukiPlayer, Card, ThemeSlot } from "../lib/types";
+import PlayerAvatar from "./PlayerAvatar";
 import {
   drawCard,
   cpuChooseCard,
@@ -40,12 +41,12 @@ const SUIT_COLORS: Record<string, string> = {
 
 /* ─── Card Components ─── */
 
-function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) {
+function CardFace({ card, highlighted, large }: { card: Card; highlighted?: boolean; large?: boolean }) {
   const isJoker = card.suit === "joker";
   const color = SUIT_COLORS[card.suit];
   return (
     <div
-      className={`relative w-[52px] h-[74px] rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0 transition-transform duration-200
+      className={`relative ${large ? "w-[78px] h-[111px]" : "w-[52px] h-[74px]"} rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0 transition-transform duration-200
         ${highlighted ? "border-2 border-yellow-400 ring-2 ring-yellow-300 scale-110 -translate-y-2" : "border border-gray-300"}`}
       style={{
         background: isJoker
@@ -55,15 +56,15 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
     >
       {isJoker ? (
         <>
-          <span className="text-xl leading-none">💸</span>
-          <span className="text-[7px] font-bold" style={{ color: "#7c3aed" }}>
+          <span className={`${large ? "text-3xl" : "text-xl"} leading-none`}>💸</span>
+          <span className={`${large ? "text-[10px]" : "text-[7px]"} font-bold`} style={{ color: "#7c3aed" }}>
             請求書
           </span>
         </>
       ) : (
         <>
           <span
-            className="text-[8px] font-bold leading-none absolute top-0.5 left-1"
+            className={`${large ? "text-[12px]" : "text-[8px]"} font-bold leading-none absolute top-0.5 left-1`}
             style={{ color }}
           >
             {card.label}
@@ -72,8 +73,8 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
           <img
             src={card.imageUrl}
             alt={card.label}
-            width={26}
-            height={26}
+            width={large ? 45 : 30}
+            height={large ? 45 : 30}
             className="object-contain"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -81,7 +82,7 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
               if (fallback) fallback.style.display = "block";
             }}
           />
-          <span className="text-xl leading-none hidden" style={{ color }}>
+          <span className={`${large ? "text-3xl" : "text-xl"} leading-none hidden`} style={{ color }}>
             {SUIT_SYMBOLS[card.suit]}
           </span>
         </>
@@ -93,16 +94,35 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
 function CardBack({
   onClick,
   highlighted,
+  small,
+  large,
+  compact,
 }: {
   onClick?: () => void;
   highlighted?: boolean;
+  small?: boolean;
+  large?: boolean;
+  compact?: boolean;
 }) {
+  const sizeClass = small
+    ? "w-[22px] h-[30px]"
+    : large
+    ? "w-[78px] h-[111px]"
+    : compact
+    ? "w-[38px] h-[54px]"
+    : "w-[52px] h-[74px]";
+  const innerClass = large
+    ? "w-[58px] h-[90px]"
+    : compact
+    ? "w-[28px] h-[42px]"
+    : "w-[38px] h-[58px]";
+
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
-      className={`w-[52px] h-[74px] rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0 transition-transform duration-150
-        ${onClick ? "cursor-pointer hover:scale-110 hover:-translate-y-2" : "cursor-default"}
+      className={`${sizeClass} rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0 transition-transform duration-150
+        ${onClick ? "cursor-pointer hover:scale-110 hover:-translate-y-1" : "cursor-default"}
         ${highlighted ? "border-yellow-400 ring-2 ring-yellow-300" : "border-blue-900"}
       `}
       style={{
@@ -111,9 +131,11 @@ function CardBack({
           : "linear-gradient(135deg, #1e3a5f, #1e40af)",
       }}
     >
-      <div className="w-[38px] h-[58px] rounded border border-white/20 flex items-center justify-center">
-        <span className="text-white/60 text-lg">☁</span>
-      </div>
+      {!small && (
+        <div className={`${innerClass} rounded border border-white/20 flex items-center justify-center`}>
+          <span className={`text-white/60 ${large ? "text-xl" : compact ? "text-xs" : "text-lg"}`}>☁</span>
+        </div>
+      )}
     </button>
   );
 }
@@ -125,6 +147,7 @@ function OpponentCharacter({
   isCurrentTurn,
   isTarget,
   onCardClick,
+  position,
 }: {
   player: BabanukiPlayer;
   isCurrentTurn: boolean;
@@ -135,43 +158,50 @@ function OpponentCharacter({
   const finished = player.hand.length === 0;
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div
-        className={`relative transition-all ${isCurrentTurn ? "scale-110" : ""}`}
-      >
+    <div className="flex flex-col items-center gap-2">
+      {/* アバターとプレイヤー情報 */}
+      <div className="flex flex-col items-center gap-1">
         <div
-          className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg border-3
-            ${isCurrentTurn ? "border-yellow-400 bg-yellow-900/40 animate-pulse" : "border-white/30 bg-black/30"}`}
+          className={`relative transition-all ${isCurrentTurn ? "scale-110" : ""}`}
         >
-          {player.avatar}
-        </div>
-        {isCurrentTurn && !finished && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
-            <span className="text-[8px] font-bold">&#x25B6;</span>
+          <div
+            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-2
+              ${isCurrentTurn ? "border-yellow-400 bg-yellow-900/40 animate-pulse" : "border-white/30 bg-black/30"}`}
+          >
+            <PlayerAvatar src={player.avatar} name={player.name} size={60} />
           </div>
-        )}
-      </div>
-
-      <div className="bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-center min-w-[90px] border border-white/10">
-        <div className="text-white text-xs font-bold">{player.name}</div>
-        <div className="text-[10px] text-gray-300">
-          {finished ? (
-            <span className="text-green-400">&#x2714; 上がり!</span>
-          ) : (
-            `残り ${player.hand.length}枚`
+          {isCurrentTurn && !finished && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
+              <span className="text-[7px] font-bold">&#x25B6;</span>
+            </div>
           )}
         </div>
+
+        <div className="bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-center border border-white/10">
+          <div className="text-white text-xs font-bold">{player.name}</div>
+          <div className="text-[10px] text-gray-300">
+            {finished ? (
+              <span className="text-green-400">&#x2714; 上がり!</span>
+            ) : (
+              `${player.hand.length}枚`
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* 手札 */}
       {!finished && (
-        <div className="flex gap-1 flex-wrap justify-center">
-          {player.hand.map((_, i) => (
+        <div
+          className="flex gap-1 flex-wrap justify-center relative z-20"
+          style={position === "right" ? { maxWidth: isTarget ? "406px" : "206px" } : undefined}
+        >
+          {player.hand.map((_, idx) => (
             <CardBack
-              key={i}
+              key={idx}
+              onClick={onCardClick ? () => onCardClick(idx) : undefined}
               highlighted={isTarget}
-              onClick={
-                isTarget && onCardClick ? () => onCardClick(i) : undefined
-              }
+              large={isTarget}
+              compact={!isTarget}
             />
           ))}
         </div>
@@ -491,28 +521,10 @@ export default function PlayScreen({
       </div>
 
       {/* Game area */}
-      <div className="relative z-10 flex-1 flex flex-col">
-        {/* Opponents row */}
-        <div className="flex justify-around items-start px-4 pt-3 pb-1">
-          {/* Left character (index 3) */}
-          {players[3] && (
-            <OpponentCharacter
-              player={players[3]}
-              isCurrentTurn={currentTurnIndex === 3}
-              isTarget={targetIndex === 3 && !players[currentTurnIndex].isCPU}
-              onCardClick={
-                targetIndex === 3 &&
-                !players[currentTurnIndex].isCPU &&
-                !isProcessing
-                  ? handlePlayerDraw
-                  : undefined
-              }
-              position="left"
-            />
-          )}
-
-          {/* Top character (index 2) */}
-          {players[2] && (
+      <div className="relative z-10 flex-1 overflow-hidden">
+        {/* Top - players[2]: 机の奥側 */}
+        {players[2] && (
+          <div className="absolute z-20" style={{ top: "2%", left: "50%", transform: "translateX(-50%)" }}>
             <OpponentCharacter
               player={players[2]}
               isCurrentTurn={currentTurnIndex === 2}
@@ -526,10 +538,31 @@ export default function PlayScreen({
               }
               position="top"
             />
-          )}
+          </div>
+        )}
 
-          {/* Right character (index 1) */}
-          {players[1] && (
+        {/* Left - players[3]: 机の左側 */}
+        {players[3] && (
+          <div className="absolute z-20" style={{ top: "50%", left: "1%", transform: "translateY(-50%)" }}>
+            <OpponentCharacter
+              player={players[3]}
+              isCurrentTurn={currentTurnIndex === 3}
+              isTarget={targetIndex === 3 && !players[currentTurnIndex].isCPU}
+              onCardClick={
+                targetIndex === 3 &&
+                !players[currentTurnIndex].isCPU &&
+                !isProcessing
+                  ? handlePlayerDraw
+                  : undefined
+              }
+              position="left"
+            />
+          </div>
+        )}
+
+        {/* Right - players[1]: 机の右側 */}
+        {players[1] && (
+          <div className="absolute z-20" style={{ top: "50%", right: "1%", transform: "translateY(-50%)" }}>
             <OpponentCharacter
               player={players[1]}
               isCurrentTurn={currentTurnIndex === 1}
@@ -543,109 +576,89 @@ export default function PlayScreen({
               }
               position="right"
             />
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Table area */}
-        <div className="flex-1 flex items-center justify-center px-4">
-          <div
-            className="relative w-full max-w-2xl rounded-[40px] border-4 border-yellow-900/60 shadow-2xl overflow-hidden"
-            style={{
-              height: "180px",
-              background:
-                "linear-gradient(180deg, #8B6914 0%, #A67C00 30%, #C4952A 50%, #A67C00 70%, #8B6914 100%)",
-              boxShadow:
-                "inset 0 2px 20px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.5)",
-            }}
-          >
-            {/* Wood grain lines */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-full h-px bg-yellow-950/40"
-                  style={{ top: `${12 + i * 12}%` }}
+        {/* Center - 丸机 */}
+        <div
+          className="absolute z-[15]"
+          style={{
+            left: "8%",
+            right: "8%",
+            top: "35%",
+            bottom: "8%",
+            borderRadius: "50%",
+            background: "#D9C27A",
+            boxShadow: "0 10px 0 #A8903A, 0 14px 30px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* テーブル中央のコンテンツ */}
+          <div className="absolute inset-0 flex items-center justify-center -translate-y-4">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-bold text-center max-w-[200px] border border-white/10">
+                {message}
+              </div>
+
+              {lastDrawnInfo && (
+                <div className="bg-yellow-400/90 text-gray-900 px-2 py-0.5 rounded-lg text-xs font-bold shadow-lg animate-bounce">
+                  {lastDrawnInfo}
+                </div>
+              )}
+
+              <div className="w-10 h-10 rounded-full bg-amber-100/90 border-4 border-amber-800 flex items-center justify-center shadow-lg">
+                <span className="text-lg">🕰</span>
+              </div>
+
+              <div className="flex gap-1 flex-wrap justify-center">
+                {players.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold
+                      ${currentTurnIndex === players.indexOf(p)
+                        ? "bg-yellow-400/80 text-gray-900"
+                        : "bg-black/40 text-white/80"}`}
+                  >
+                    <PlayerAvatar src={p.avatar} name={p.name} size={10} />
+                    <span>
+                      {p.finishedOrder
+                        ? `${p.finishedOrder}位`
+                        : `${p.hand.length}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>{/* /table */}
+
+        {/* Bottom - players[0]: プレイヤー手札のみ */}
+        <div className="absolute z-20" style={{ bottom: "1%", left: "50%", transform: "translateX(-50%)" }}>
+          {players[0].hand.length > 0 ? (
+            <div className="flex gap-1 flex-nowrap justify-center max-w-[90vw] overflow-x-auto relative z-20">
+              {players[0].hand.map((card) => (
+                <CardFace
+                  key={card.id}
+                  card={card}
+                  highlighted={highlightedRank != null && card.rank === highlightedRank}
+                  large
                 />
               ))}
-            </div>
-
-            {/* Center content on table */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <div className="bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-xs font-bold text-center max-w-[280px] border border-white/10">
-                  {message}
+              {drawnCardPreview && (
+                <div className="flex flex-col items-center gap-0.5 shrink-0">
+                  <span className="text-[9px] text-yellow-300 font-bold">引いた！</span>
+                  <CardFace
+                    card={drawnCardPreview}
+                    highlighted={highlightedRank === drawnCardPreview.rank}
+                    large
+                  />
                 </div>
-
-                {lastDrawnInfo && (
-                  <div className="bg-yellow-400/90 text-gray-900 px-3 py-1 rounded-lg text-xs font-bold shadow-lg animate-bounce">
-                    {lastDrawnInfo}
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  {players.map((p) => (
-                    <div
-                      key={p.id}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold
-                        ${currentTurnIndex === players.indexOf(p)
-                          ? "bg-yellow-400/80 text-gray-900"
-                          : "bg-black/40 text-white/80"}`}
-                    >
-                      <span>{p.avatar}</span>
-                      <span>
-                        {p.finishedOrder
-                          ? `${p.finishedOrder}位`
-                          : `${p.hand.length}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
-
-            <div className="absolute bottom-3 left-4 text-2xl opacity-70">
-              &#x1F4A3;
+          ) : (
+            <div className="text-center text-green-400 font-bold text-lg py-4">
+              &#x2714; 上がり!
             </div>
-            <div className="absolute bottom-3 right-4 text-2xl opacity-70">
-              &#x231B;
-            </div>
-            <div className="absolute top-3 right-8 text-xl opacity-50">
-              &#x2728;
-            </div>
-          </div>
-        </div>
-
-        {/* Player area at bottom */}
-        <div className="pb-4 px-4">
-          <div className="flex items-center justify-center gap-3 mb-1">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 shadow
-                ${currentTurnIndex === 0 ? "border-yellow-400 bg-yellow-900/30" : "border-white/20 bg-black/30"}`}
-            >
-              {players[0].avatar}
-            </div>
-            <div className="text-white text-sm font-bold">
-              {players[0].name}
-            </div>
-            <div className="text-white/60 text-xs">
-              残り {players[0].hand.length}枚
-            </div>
-            {currentTurnIndex === 0 && (
-              <span className="bg-yellow-400 text-gray-900 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
-                YOUR TURN
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center justify-center gap-3">
-            <PlayerHand player={players[0]} highlightedRank={highlightedRank} />
-            {drawnCardPreview && (
-              <div className="flex flex-col items-center gap-0.5 shrink-0">
-                <span className="text-[9px] text-yellow-300 font-bold">引いた！</span>
-                <CardFace card={drawnCardPreview} highlighted={highlightedRank === drawnCardPreview.rank} />
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
