@@ -227,7 +227,7 @@ export default function PlayScreen({
   const processingRef = useRef(false);
   const cpuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const themeText = `${theme.who} ${theme.when} ${theme.where} ${theme.what}`;
+  const themeText = `${theme.work} / ${theme.when} / ${theme.where} / ${theme.style}`;
 
   useEffect(() => {
     return () => {
