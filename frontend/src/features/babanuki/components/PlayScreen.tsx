@@ -79,12 +79,6 @@ function CardFace({ card }: { card: Card }) {
           <span className="text-xl leading-none hidden" style={{ color }}>
             {SUIT_SYMBOLS[card.suit]}
           </span>
-          <span
-            className="text-[8px] font-bold leading-none absolute bottom-0.5 right-1 rotate-180"
-            style={{ color }}
-          >
-            {card.label}
-          </span>
         </>
       )}
     </div>
