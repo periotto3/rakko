@@ -36,12 +36,13 @@ const SUIT_COLORS: Record<string, string> = {
 
 /* ─── Card Components ─── */
 
-function CardFace({ card }: { card: Card }) {
+function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) {
   const isJoker = card.suit === "joker";
   const color = SUIT_COLORS[card.suit];
   return (
     <div
-      className="relative w-[52px] h-[74px] rounded-lg shadow-lg border border-gray-300 flex flex-col items-center justify-center select-none shrink-0"
+      className={`relative w-[52px] h-[74px] rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0 transition-transform duration-200
+        ${highlighted ? "border-2 border-yellow-400 ring-2 ring-yellow-300 scale-110 -translate-y-2" : "border border-gray-300"}`}
       style={{
         background: isJoker
           ? "linear-gradient(135deg, #faf5ff, #fce7f3)"
@@ -170,7 +171,7 @@ function OpponentCharacter({
 
 /* ─── Player Hand ─── */
 
-function PlayerHand({ player }: { player: BabanukiPlayer }) {
+function PlayerHand({ player, highlightedRank }: { player: BabanukiPlayer; highlightedRank?: number | null }) {
   const finished = player.hand.length === 0;
 
   if (finished) {
@@ -184,7 +185,7 @@ function PlayerHand({ player }: { player: BabanukiPlayer }) {
   return (
     <div className="flex gap-1 flex-wrap justify-center">
       {player.hand.map((card) => (
-        <CardFace key={card.id} card={card} />
+        <CardFace key={card.id} card={card} highlighted={highlightedRank != null && card.rank === highlightedRank} />
       ))}
     </div>
   );
@@ -209,6 +210,8 @@ export default function PlayScreen({
   const [isProcessing, setIsProcessing] = useState(false);
   const [finishedCount, setFinishedCount] = useState(0);
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
+  const [drawnCardPreview, setDrawnCardPreview] = useState<Card | null>(null);
+  const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
 
   const processingRef = useRef(false);
   const cpuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -235,6 +238,9 @@ export default function PlayScreen({
       }
 
       const cardIdx = cpuChooseCard(turnPlayers[turnTarget].hand.length);
+      const drawnCard = turnPlayers[turnTarget].hand[cardIdx];
+      const cpuName = turnPlayers[turnIndex].name;
+
       const result = drawCard(
         turnPlayers,
         turnIndex,
@@ -243,8 +249,6 @@ export default function PlayScreen({
         turnFinished
       );
 
-      const drawnCard = turnPlayers[turnTarget].hand[cardIdx];
-      const cpuName = turnPlayers[turnIndex].name;
       if (drawnCard) {
         const wasPaired =
           result.players[turnIndex].hand.length <
@@ -330,81 +334,94 @@ export default function PlayScreen({
     processingRef.current = true;
     setIsProcessing(true);
 
-    const result = drawCard(
-      players,
-      currentTurnIndex,
-      targetIndex,
-      cardIndex,
-      finishedCount
-    );
-
     const drawnCard = players[targetIndex].hand[cardIndex];
     if (drawnCard) {
-      const isJoker = drawnCard.suit === "joker";
-      const wasPaired =
-        result.players[currentTurnIndex].hand.length <
-        players[currentTurnIndex].hand.length;
-      if (isJoker) {
-        setLastDrawnInfo("AWSの請求書を引いた！💸");
-      } else if (wasPaired) {
-        setLastDrawnInfo(
-          `${drawnCard.label}${SUIT_SYMBOLS[drawnCard.suit]}でペア！`
-        );
-      } else {
-        setLastDrawnInfo(
-          `${drawnCard.label}${SUIT_SYMBOLS[drawnCard.suit]}を引いた`
-        );
-      }
+      setDrawnCardPreview(drawnCard);
+      const wouldPair = players[currentTurnIndex].hand.some(
+        (c) => c.rank === drawnCard.rank
+      );
+      if (wouldPair) setHighlightedRank(drawnCard.rank);
     }
 
-    setPlayers(result.players);
-    setFinishedCount(result.finishedCount);
+    cpuTimeoutRef.current = setTimeout(() => {
+      setDrawnCardPreview(null);
+      setHighlightedRank(null);
 
-    const afterDraw = () => {
-      if (isGameOver(result.players)) {
-        const final = result.players.map((p) => {
-          if (p.hand.length > 0 && p.finishedOrder === null) {
-            return { ...p, finishedOrder: result.finishedCount + 1 };
-          }
-          return p;
-        });
-        setPlayers(final);
-        processingRef.current = false;
-        setIsProcessing(false);
-        const winner = getWinner(final);
-        setTimeout(() => onGameEnd(winner, final), 1500);
-        return;
+      const result = drawCard(
+        players,
+        currentTurnIndex,
+        targetIndex,
+        cardIndex,
+        finishedCount
+      );
+
+      if (drawnCard) {
+        const isJoker = drawnCard.suit === "joker";
+        const wasPaired =
+          result.players[currentTurnIndex].hand.length <
+          players[currentTurnIndex].hand.length;
+        if (isJoker) {
+          setLastDrawnInfo("AWSの請求書を引いた！💸");
+        } else if (wasPaired) {
+          setLastDrawnInfo(
+            `${drawnCard.label}${SUIT_SYMBOLS[drawnCard.suit]}でペア！`
+          );
+        } else {
+          setLastDrawnInfo(
+            `${drawnCard.label}${SUIT_SYMBOLS[drawnCard.suit]}を引いた`
+          );
+        }
       }
 
-      const next = getNextActivePlayer(result.players, currentTurnIndex);
-      const nextTarget = getDrawTarget(result.players, next);
-      setCurrentTurnIndex(next);
-      setTargetIndex(nextTarget);
+      setPlayers(result.players);
+      setFinishedCount(result.finishedCount);
 
-      if (!result.players[next].isCPU) {
-        setMessage(
-          "あなたのターンです。相手のカードをクリックして引いてください！"
-        );
-        processingRef.current = false;
-        setIsProcessing(false);
+      const afterDraw = () => {
+        if (isGameOver(result.players)) {
+          const final = result.players.map((p) => {
+            if (p.hand.length > 0 && p.finishedOrder === null) {
+              return { ...p, finishedOrder: result.finishedCount + 1 };
+            }
+            return p;
+          });
+          setPlayers(final);
+          processingRef.current = false;
+          setIsProcessing(false);
+          const winner = getWinner(final);
+          setTimeout(() => onGameEnd(winner, final), 1500);
+          return;
+        }
+
+        const next = getNextActivePlayer(result.players, currentTurnIndex);
+        const nextTarget = getDrawTarget(result.players, next);
+        setCurrentTurnIndex(next);
+        setTargetIndex(nextTarget);
+
+        if (!result.players[next].isCPU) {
+          setMessage(
+            "あなたのターンです。相手のカードをクリックして引いてください！"
+          );
+          processingRef.current = false;
+          setIsProcessing(false);
+        } else {
+          setMessage(`${result.players[next].name}のターン...`);
+          const delay = 800 + Math.random() * 700;
+          cpuTimeoutRef.current = setTimeout(() => {
+            executeTurn(result.players, next, nextTarget, result.finishedCount);
+          }, delay);
+        }
+      };
+
+      if (result.newlyFinished.length > 0) {
+        const names = result.newlyFinished
+          .map((i) => result.players[i].name)
+          .join("と");
+        setMessage(`${names}が上がり！`);
+        cpuTimeoutRef.current = setTimeout(afterDraw, 1200);
       } else {
-        setMessage(`${result.players[next].name}のターン...`);
-        const delay = 800 + Math.random() * 700;
-        cpuTimeoutRef.current = setTimeout(() => {
-          executeTurn(result.players, next, nextTarget, result.finishedCount);
-        }, delay);
+        cpuTimeoutRef.current = setTimeout(afterDraw, 500);
       }
-    };
-
-    if (result.newlyFinished.length > 0) {
-      const names = result.newlyFinished
-        .map((i) => result.players[i].name)
-        .join("と");
-      setMessage(`${names}が上がり！`);
-      cpuTimeoutRef.current = setTimeout(afterDraw, 1200);
-    } else {
-      cpuTimeoutRef.current = setTimeout(afterDraw, 500);
-    }
+    }, 1000);
   };
 
   // Counter-clockwise: 0(bottom) → 1(right) → 2(top) → 3(left)
@@ -609,7 +626,15 @@ export default function PlayScreen({
             )}
           </div>
 
-          <PlayerHand player={players[0]} />
+          <div className="flex items-center justify-center gap-3">
+            <PlayerHand player={players[0]} highlightedRank={highlightedRank} />
+            {drawnCardPreview && (
+              <div className="flex flex-col items-center gap-0.5 shrink-0">
+                <span className="text-[9px] text-yellow-300 font-bold">引いた！</span>
+                <CardFace card={drawnCardPreview} highlighted={highlightedRank === drawnCardPreview.rank} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
