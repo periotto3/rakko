@@ -9,6 +9,7 @@ import {
   WaitingScreen,
   GeneratingScreen,
   PlayScreen,
+  OnlinePlayScreen,
   ResultScreen,
   dealCards,
 } from "@/features/babanuki";
@@ -139,6 +140,15 @@ export default function BabanukiPage() {
       );
 
     case "playing":
+      if (gameMode === "online" && gameStartData) {
+        return (
+          <OnlinePlayScreen
+            gameService={gameService!}
+            gameStartData={gameStartData}
+            onGameEnd={handleGameEnd}
+          />
+        );
+      }
       return (
         <PlayScreen
           initialPlayers={players}

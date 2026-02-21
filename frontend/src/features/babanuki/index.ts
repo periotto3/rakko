@@ -4,6 +4,7 @@
 export { default as TitleScreen } from "./components/TitleScreen";
 export { default as WaitingScreen } from "./components/WaitingScreen";
 export { default as GeneratingScreen } from "./components/GeneratingScreen";
+export { default as OnlinePlayScreen } from "./components/OnlinePlayScreen";
 export { default as PlayScreen } from "./components/PlayScreen";
 export { default as ResultScreen } from "./components/ResultScreen";
 
