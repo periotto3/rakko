@@ -14,6 +14,7 @@ import { ApiGatewayNotificationService } from "../lambda/infrastructure/websocke
 import { JoinGameUseCase } from "../lambda/application/useCase/joinGameUseCase";
 import { DrawCardUseCase } from "../lambda/application/useCase/drawCardUseCase";
 import { GetStateUseCase } from "../lambda/application/useCase/getStateUseCase";
+import { ImageGenerationService } from "../lambda/domain/model/imageGeneration/imageGenerationService";
 
 const ddbMock = mockClient(DynamoDBDocumentClient);
 const apigwMock = mockClient(ApiGatewayManagementApiClient);
@@ -30,7 +31,7 @@ function createUseCases() {
   const gameRepo = new GameDynamoDBRepository(ctx);
   const notificationService = new ApiGatewayNotificationService(ENDPOINT, connectionRepo);
   return {
-    joinGameUseCase: new JoinGameUseCase(connectionRepo, matchmakingRepo, gameRepo, notificationService),
+    joinGameUseCase: new JoinGameUseCase(connectionRepo, matchmakingRepo, gameRepo, notificationService, { generate: async () => [] } as ImageGenerationService),
     drawCardUseCase: new DrawCardUseCase(connectionRepo, gameRepo, notificationService),
     getStateUseCase: new GetStateUseCase(connectionRepo, gameRepo, notificationService),
   };

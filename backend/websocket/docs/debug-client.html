@@ -93,6 +93,14 @@
   .roulette-slot.spinning { background: #2c2c4a; color: #ddd; border-color: #e94560; animation: spinGlow 0.3s ease-in-out infinite alternate; }
   @keyframes slotPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
   @keyframes spinGlow { 0% { border-color: #e94560; text-shadow: 0 0 4px rgba(233,69,96,0.5); } 100% { border-color: #f39c12; text-shadow: 0 0 4px rgba(243,156,18,0.5); } }
+
+  /* Generating / Images */
+  .generating-area { padding: 8px 12px; flex-shrink: 0; }
+  .generating-spinner { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #f39c12; }
+  .generating-spinner::before { content: ''; width: 16px; height: 16px; border: 2px solid #f39c12; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .image-gallery img { width: 100%; border-radius: 4px; border: 1px solid #0f3460; }
 </style>
 </head>
 <body>
@@ -144,6 +152,7 @@ class PlayerPanel {
         <div class="roulette-label">Theme Roulette</div>
         <div class="roulette-slots"></div>
       </div>
+      <div class="generating-area" style="display:none;"></div>
       <div class="hand-area">
         <div class="hand-label">My Hand</div>
         <div class="hand my-hand"></div>
@@ -173,6 +182,7 @@ class PlayerPanel {
     this.rankingsContainer = panel.querySelector('.rankings-container');
     this.rouletteArea = panel.querySelector('.roulette-area');
     this.rouletteSlotsEl = panel.querySelector('.roulette-slots');
+    this.generatingArea = panel.querySelector('.generating-area');
     this.logEl = panel.querySelector('.log');
     this.clearLogBtn = panel.querySelector('.clear-log-btn');
 
@@ -295,6 +305,27 @@ class PlayerPanel {
         this.renderRankings();
         this.el.classList.add('finished');
         setTimeout(() => { if (this.ws) this.ws.close(); }, 3000);
+        break;
+
+      case 'generating':
+        this.generatingArea.style.display = '';
+        this.generatingArea.innerHTML = '<div class="generating-spinner">Generating images...</div>';
+        this.updateStatus('Generating images...', 'waiting');
+        break;
+
+      case 'images_ready':
+        this.generatingArea.style.display = '';
+        this.generatingArea.innerHTML = '';
+        const gallery = document.createElement('div');
+        gallery.className = 'image-gallery';
+        (msg.imageUrls || []).forEach(url => {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = 'Generated image';
+          gallery.appendChild(img);
+        });
+        this.generatingArea.appendChild(gallery);
+        this.updateStatus('Images ready', 'playing');
         break;
 
       case 'error':
@@ -496,6 +527,8 @@ class PlayerPanel {
     this.rankingsContainer.innerHTML = '';
     this.rouletteArea.style.display = 'none';
     this.rouletteSlotsEl.innerHTML = '';
+    this.generatingArea.style.display = 'none';
+    this.generatingArea.innerHTML = '';
     this.updateStatus('Disconnected', 'disconnected');
     this.el.classList.remove('my-turn', 'finished');
   }

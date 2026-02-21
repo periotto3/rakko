@@ -1,6 +1,6 @@
 import { ConnectionRepository } from "../../domain/model/connection/connectionRepository.js";
 import { GameRepository } from "../../domain/model/game/gameRepository.js";
-import { NotificationService } from "../service/notificationService.js";
+import { NotificationService } from "../../domain/model/notification/notificationService.js";
 import { PublicPlayer } from "../../domain/model/player/publicPlayer.js";
 import { ApplicationError } from "../error/applicationError.js";
 

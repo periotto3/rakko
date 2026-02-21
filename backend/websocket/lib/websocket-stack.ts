@@ -52,8 +52,11 @@ export class WebsocketStack extends cdk.Stack {
       handler: 'messageHandler',
       runtime: Runtime.NODEJS_22_X,
       bundling,
-      environment,
-      timeout: cdk.Duration.seconds(10),
+      environment: {
+        ...environment,
+        IMAGE_API_URL: process.env.IMAGE_API_URL!,
+      },
+      timeout: cdk.Duration.seconds(90),
     });
 
     // Grant DynamoDB access to all Lambdas

@@ -3,7 +3,7 @@ import { JoinGameUseCase } from "../../application/useCase/joinGameUseCase.js";
 import { DrawCardUseCase } from "../../application/useCase/drawCardUseCase.js";
 import { GetStateUseCase } from "../../application/useCase/getStateUseCase.js";
 import { ApplicationError } from "../../application/error/applicationError.js";
-import { NotificationService } from "../../application/service/notificationService.js";
+import { NotificationService } from "../../domain/model/notification/notificationService.js";
 import { ClientMessage } from "../dto/clientMessage.js";
 
 export function createMessageHandler(

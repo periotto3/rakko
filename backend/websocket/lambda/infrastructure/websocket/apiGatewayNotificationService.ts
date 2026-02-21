@@ -3,7 +3,7 @@ import {
   PostToConnectionCommand,
   GoneException,
 } from "@aws-sdk/client-apigatewaymanagementapi";
-import { NotificationService } from "../../application/service/notificationService.js";
+import { NotificationService } from "../../domain/model/notification/notificationService.js";
 import { ConnectionRepository } from "../../domain/model/connection/connectionRepository.js";
 import { Game } from "../../domain/model/game/game.js";
 import { PublicPlayer } from "../../domain/model/player/publicPlayer.js";

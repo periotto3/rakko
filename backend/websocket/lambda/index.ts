@@ -4,6 +4,7 @@ import { GameDynamoDBRepository } from "./infrastructure/dynamodb/gameDynamoDBRe
 import { ConnectionDynamoDBRepository } from "./infrastructure/dynamodb/connectionDynamoDBRepository.js";
 import { MatchmakingDynamoDBRepository } from "./infrastructure/dynamodb/matchmakingDynamoDBRepository.js";
 import { ApiGatewayNotificationService } from "./infrastructure/websocket/apiGatewayNotificationService.js";
+import { HttpImageGenerationService } from "./infrastructure/http/httpImageGenerationService.js";
 
 // UseCases
 import { ConnectUseCase } from "./application/useCase/connectUseCase.js";
@@ -28,6 +29,8 @@ function createNotificationService(endpoint: string) {
   return new ApiGatewayNotificationService(endpoint, connectionRepo);
 }
 
+const imageGenerationService = new HttpImageGenerationService(process.env.IMAGE_API_URL!);
+
 const connectUseCase = new ConnectUseCase(connectionRepo);
 const disconnectUseCase = new DisconnectUseCase(connectionRepo, matchmakingRepo);
 
@@ -35,7 +38,7 @@ const disconnectUseCase = new DisconnectUseCase(connectionRepo, matchmakingRepo)
 export const connectHandler = createConnectHandler(connectUseCase);
 export const disconnectHandler = createDisconnectHandler(disconnectUseCase);
 export const messageHandler = createMessageHandler(
-  (endpoint) => new JoinGameUseCase(connectionRepo, matchmakingRepo, gameRepo, createNotificationService(endpoint)),
+  (endpoint) => new JoinGameUseCase(connectionRepo, matchmakingRepo, gameRepo, createNotificationService(endpoint), imageGenerationService),
   (endpoint) => new DrawCardUseCase(connectionRepo, gameRepo, createNotificationService(endpoint)),
   (endpoint) => new GetStateUseCase(connectionRepo, gameRepo, createNotificationService(endpoint)),
   createNotificationService

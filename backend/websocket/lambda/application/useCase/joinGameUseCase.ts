@@ -3,12 +3,14 @@ import { ConnectionRepository } from "../../domain/model/connection/connectionRe
 import { Connection } from "../../domain/model/connection/connection.js";
 import { MatchmakingRepository } from "../../domain/model/matchmaking/matchmakingRepository.js";
 import { GameRepository } from "../../domain/model/game/gameRepository.js";
-import { NotificationService } from "../service/notificationService.js";
+import { ImageGenerationService } from "../../domain/model/imageGeneration/imageGenerationService.js";
+import { NotificationService } from "../../domain/model/notification/notificationService.js";
 import { Player } from "../../domain/model/player/player.js";
 import { PublicPlayer } from "../../domain/model/player/publicPlayer.js";
 import { Game } from "../../domain/model/game/game.js";
 import { RouletteSlot } from "../../domain/model/matchmaking/rouletteSlot.js";
 import { Deck } from "../../domain/model/card/deck.js";
+import { buildPrompt } from "../../domain/model/matchmaking/promptBuilder.js";
 import {
   THEME_SLOT_KEYS,
   THEME_ITEMS,
@@ -22,7 +24,8 @@ export class JoinGameUseCase {
     private connectionRepo: ConnectionRepository,
     private matchmakingRepo: MatchmakingRepository,
     private gameRepo: GameRepository,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private imageGenerationService: ImageGenerationService
   ) {}
 
   async execute(connectionId: string, playerName: string): Promise<void> {
@@ -71,6 +74,35 @@ export class JoinGameUseCase {
       )
     );
 
+    // --- Image generation phase ---
+    await Promise.all(
+      matchedPlayers.map((w) =>
+        this.notificationService.sendToConnection(w.connectionId, {
+          type: "generating",
+        })
+      )
+    );
+
+    const gameId = randomUUID();
+
+    let imageUrls: string[] = [];
+    try {
+      const prompt = buildPrompt(slots);
+      imageUrls = await this.imageGenerationService.generate(prompt, gameId);
+    } catch (err) {
+      console.error("Image generation failed, continuing without images:", err);
+    }
+
+    await Promise.all(
+      matchedPlayers.map((w) =>
+        this.notificationService.sendToConnection(w.connectionId, {
+          type: "images_ready",
+          imageUrls,
+        })
+      )
+    );
+
+    // --- Game start phase ---
     let players: Player[] = matchedPlayers.map(
       (w, i) =>
         new Player(w.connectionId, w.playerName, AVATARS[i], i, [], null)
@@ -78,7 +110,6 @@ export class JoinGameUseCase {
 
     players = Deck.deal(players);
 
-    const gameId = randomUUID();
     const game = new Game(gameId, "playing", players, 0, 0, 1);
 
     await this.gameRepo.create(game);
