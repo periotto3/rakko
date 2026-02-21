@@ -68,8 +68,8 @@ function CardFace({ card, highlighted }: { card: Card; highlighted?: boolean }) 
           <img
             src={card.imageUrl}
             alt={card.label}
-            width={30}
-            height={30}
+            width={26}
+            height={26}
             className="object-contain"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";

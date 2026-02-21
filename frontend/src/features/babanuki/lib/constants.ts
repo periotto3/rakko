@@ -19,12 +19,12 @@ export const AWS_SERVICES: {
   { label: "RDS",            suit: "database", rank: 6,  imageUrl: `${BASE_URL}/Database/RDS.png` },
   { label: "DynamoDB",       suit: "database", rank: 7,  imageUrl: `${BASE_URL}/Database/DynamoDB.png` },
   // Network / Integration
-  { label: "API GW",         suit: "network",  rank: 8,  imageUrl: `${BASE_URL}/NetworkingContentDelivery/APIGateway.png` },
+  { label: "API Gateway",    suit: "network",  rank: 8,  imageUrl: `${BASE_URL}/NetworkingContentDelivery/APIGateway.png` },
   { label: "Amplify",        suit: "network",  rank: 9,  imageUrl: `${BASE_URL}/FrontEndWebMobile/Amplify.png` },
   { label: "IAM",            suit: "network",  rank: 10, imageUrl: `${BASE_URL}/SecurityIdentityCompliance/IdentityandAccessManagement.png` },
   { label: "CloudWatch",     suit: "network",  rank: 11, imageUrl: `${BASE_URL}/ManagementGovernance/CloudWatch.png` },
   { label: "Cognito",        suit: "network",  rank: 12, imageUrl: `${BASE_URL}/SecurityIdentityCompliance/Cognito.png` },
-  { label: "C.Formation",    suit: "network",  rank: 13, imageUrl: `${BASE_URL}/ManagementGovernance/CloudFormation.png` },
+  { label: "Cloud Formation", suit: "network",  rank: 13, imageUrl: `${BASE_URL}/ManagementGovernance/CloudFormation.png` },
 ];
 
 export const JOKER_IMAGE_URL = `${BASE_URL}/ManagementGovernance/Billing.png`;
