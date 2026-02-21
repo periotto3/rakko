@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-export type GameMode = "cpu" | "online";
+import type { GameMode } from "../lib/types";
 
 interface TitleScreenProps {
   onStart: (mode: GameMode, playerName?: string) => void;

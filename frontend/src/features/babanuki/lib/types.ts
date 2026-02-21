@@ -24,6 +24,8 @@ export type GamePhase =
   | "playing"
   | "result";
 
+export type GameMode = "cpu" | "online";
+
 export interface ThemeSlot {
   work: string;  // 作品
   when: string;  // いつ

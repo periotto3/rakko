@@ -1,4 +1,4 @@
-import { Card } from "../lib/types";
+import { Card, BabanukiPlayer } from "../lib/types";
 
 /** 全プレイヤーの公開情報（手札の中身は非公開、枚数のみ） */
 export interface PublicPlayerData {
@@ -49,6 +49,8 @@ export interface GameService {
 
   /** マッチング待機中（N人目が参加） */
   onWaiting(cb: (waitingCount: number) => void): void;
+  /** 待機中プレイヤー一覧更新（CPUモード: 1人ずつ追加, オンライン: no-op） */
+  onWaitingPlayers(cb: (players: BabanukiPlayer[]) => void): void;
   /** ゲーム開始（4人揃った） */
   onGameStart(cb: (data: GameStartData) => void): void;
   /** ゲーム状態更新（ターン進行ごと） */

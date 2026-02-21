@@ -9,7 +9,7 @@ import {
   THEME_WHERE,
   THEME_STYLE,
 } from "../lib/engine";
-import type { GameMode } from "./TitleScreen";
+import type { GameMode } from "../lib/types";
 import type { GameService } from "../services/gameService";
 
 interface WaitingScreenProps {

@@ -22,7 +22,6 @@ const CPU_PLAYERS = [
   { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png" },
 ];
 
-// 各プレイヤーが「参加」するまでの遅延（ms）
 const JOIN_DELAYS = [500, 3000, 5500, 8000];
 
 /**
@@ -40,6 +39,7 @@ export class CpuGameService implements GameService {
   private isRunning = false;
 
   private waitingCb?: (waitingCount: number) => void;
+  private waitingPlayersCb?: (players: BabanukiPlayer[]) => void;
   private gameStartCb?: (data: GameStartData) => void;
   private gameStateCb?: (data: GameStateData) => void;
   private cardDrawnCb?: (data: CardDrawnData) => void;
@@ -47,6 +47,7 @@ export class CpuGameService implements GameService {
   private errorCb?: (message: string) => void;
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
+  onWaitingPlayers(cb: (players: BabanukiPlayer[]) => void): void { this.waitingPlayersCb = cb; }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
@@ -60,10 +61,10 @@ export class CpuGameService implements GameService {
     ];
     this.pendingPlayers = allPlayers;
 
-    // プレイヤーが1人ずつ参加する演出をシミュレート（onWaiting のみ発火）
     allPlayers.forEach((_, i) => {
       const timer = setTimeout(() => {
         this.waitingCb?.(i + 1);
+        this.waitingPlayersCb?.(allPlayers.slice(0, i + 1));
       }, JOIN_DELAYS[i]);
       this.timers.push(timer);
     });
