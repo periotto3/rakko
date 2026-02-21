@@ -11,11 +11,14 @@
     "cdk": "cdk"
   },
   "devDependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.995.0",
+    "@types/aws-lambda": "^8.10.160",
     "@types/jest": "^30",
     "@types/node": "^24.10.1",
+    "aws-cdk": "2.1106.1",
+    "esbuild": "^0.27.3",
     "jest": "^30",
     "ts-jest": "^29",
-    "aws-cdk": "2.1106.1",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3"
   },
