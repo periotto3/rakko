@@ -33,19 +33,19 @@ const WHAT_EN: Record<string, string> = {
 };
 
 const STYLE_FLAVORS = [
-  "whimsical anime",
-  "clean modern animation",
-  "soft watercolor",
-  "storybook cinematic",
-  "retro 90s anime",
+  "Japanese anime illustration, cel-shaded",
+  "modern TV anime key visual",
+  "manga-inspired line art with soft coloring",
+  "anime movie background painting style",
+  "retro 90s Japanese anime",
 ];
 
 const LIGHTING_FLAVORS = [
-  "golden-hour side light",
-  "soft ambient indoor light",
-  "low-key night light",
-  "rainy diffused light",
-  "festival color light",
+  "golden-hour anime side light",
+  "soft indoor anime ambient light",
+  "low-key anime night light",
+  "rainy diffused anime light",
+  "matsuri-inspired festival anime light",
 ];
 
 const CAMERA_FLAVORS = [
@@ -57,15 +57,15 @@ const CAMERA_FLAVORS = [
 ];
 
 const ATMOSPHERE_FLAVORS = [
-  "friendly tension",
-  "lively expressions",
-  "quiet suspense",
-  "playful competition",
-  "warm nostalgia",
+  "friendly tension with expressive anime faces",
+  "lively shonen-style expressions",
+  "quiet suspense like a psychological anime scene",
+  "playful competition in a slice-of-life anime tone",
+  "warm nostalgia like a summer anime ending scene",
 ];
 
 const NEGATIVE_CONSTRAINTS =
-  "avoid extra people, wrong player count, full body, extra fingers, blurry face, text, logo, watermark";
+  "avoid extra people, wrong player count, full body, extra fingers, blurry face, text, logo, watermark, photorealistic western portrait, live-action look";
 
 function pickRandom<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)];
@@ -85,9 +85,9 @@ export function buildPrompt(slots: RouletteSlot[]): string {
   const atmosphereFlavor = pickRandom(ATMOSPHERE_FLAVORS);
 
   const fixedScene =
-    "Old Maid background, first-person at a table, exactly three upper-body opponents across the table, all playing with cards";
+    "Japanese anime Old Maid card game scene, first-person at a table, exactly three upper-body opponents across the table, all playing with cards";
   const visibleLayer = `theme: ${who}, ${when}, ${where}, mood ${what}`;
   const hiddenLayer = `${styleFlavor}, ${lightingFlavor}, ${cameraFlavor}, ${atmosphereFlavor}`;
 
-  return `${fixedScene}, ${visibleLayer}, ${hiddenLayer}, high detail, landscape, ${NEGATIVE_CONSTRAINTS}`;
+  return `${fixedScene}, ${visibleLayer}, ${hiddenLayer}, Japanese anime, manga aesthetics, high detail, landscape, ${NEGATIVE_CONSTRAINTS}`;
 }
