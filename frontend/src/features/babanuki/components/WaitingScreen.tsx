@@ -143,7 +143,7 @@ export default function WaitingScreen({
 
   // オンラインモード：シンプルな待機画面
   if (mode === "online") {
-    const AVATARS = ["😊", "🐱", "🐶", "🐰"];
+    const AVATARS = ["/avatars/user.png", "/avatars/cpu_1.png", "/avatars/cpu_2.png", "/avatars/cpu_3.png"];
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
         <h1 className="text-3xl font-bold mb-2">
@@ -153,10 +153,8 @@ export default function WaitingScreen({
 
         <div className="flex gap-4 mb-10">
           {Array.from({ length: maxPlayers }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <span className={`text-4xl transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}>
-                {AVATARS[i]}
-              </span>
+            <div key={i} className={`flex flex-col items-center transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}>
+              <PlayerAvatar src={AVATARS[i]} name={`プレイヤー${i + 1}`} size={40} />
               <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
                 {i < waitingCount ? "参加済" : "待機中"}
               </span>

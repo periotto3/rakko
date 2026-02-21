@@ -249,7 +249,7 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
         style={
           backgroundImage
             ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-            : { background: "radial-gradient(ellipse at 50% 30%, #4a1a6b 0%, #2d1040 30%, #1a0a2e 60%, #0a0414 100%)" }
+            : { backgroundImage: `url(/backgrounds/background.png)`, backgroundSize: "cover", backgroundPosition: "center" }
         }
       />
 

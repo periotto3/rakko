@@ -4,9 +4,21 @@ import {
   GameStateData,
   CardDrawnData,
   RankingData,
+  PublicPlayerData,
 } from "./gameService";
 import { WEBSOCKET_ORIGIN } from "./websocket";
 import { backendCardToFrontendCard, BackendCard } from "../lib/cardMapping";
+
+const SEAT_AVATARS = [
+  "/avatars/user.png",
+  "/avatars/cpu_1.png",
+  "/avatars/cpu_2.png",
+  "/avatars/cpu_3.png",
+];
+
+function assignAvatars<T extends { seatIndex: number }>(players: T[]): (T & { avatar: string })[] {
+  return players.map((p) => ({ ...p, avatar: SEAT_AVATARS[p.seatIndex] ?? "/avatars/user.png" }));
+}
 
 /**
  * オンラインモードの GameService 実装。
@@ -92,7 +104,7 @@ export class OnlineGameService implements GameService {
         this.gameStartCb?.({
           yourSeatIndex: msg.yourSeatIndex as number,
           yourHand,
-          players: msg.players as GameStartData["players"],
+          players: assignAvatars(msg.players as PublicPlayerData[]),
           currentTurnSeat: msg.currentTurnSeat as number,
         });
         break;
@@ -102,7 +114,7 @@ export class OnlineGameService implements GameService {
         const yourHand = (msg.yourHand as BackendCard[]).map(backendCardToFrontendCard);
         this.gameStateCb?.({
           yourHand,
-          players: msg.players as GameStateData["players"],
+          players: assignAvatars(msg.players as PublicPlayerData[]),
           currentTurnSeat: msg.currentTurnSeat as number,
         });
         break;
@@ -117,7 +129,7 @@ export class OnlineGameService implements GameService {
         break;
 
       case "game_over":
-        this.gameOverCb?.(msg.rankings as RankingData[]);
+        this.gameOverCb?.(assignAvatars(msg.rankings as RankingData[]));
         break;
 
       case "error":

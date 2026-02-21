@@ -34,7 +34,10 @@ function SvgFallback({ color, size }: { color: string; size: number }) {
 export default function PlayerAvatar({ src, name, size = 40, className }: PlayerAvatarProps) {
   const [error, setError] = useState(false);
 
-  if (!src || error) {
+  // 画像パスでない（絵文字など）場合はフォールバック
+  const isImagePath = src?.startsWith("/") || src?.startsWith("http");
+
+  if (!src || !isImagePath || error) {
     return (
       <SvgFallback
         color={FALLBACK_COLORS[src] ?? "#888888"}
