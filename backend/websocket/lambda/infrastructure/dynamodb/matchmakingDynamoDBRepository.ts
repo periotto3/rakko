@@ -3,6 +3,7 @@ import {
   GetCommand,
   DeleteCommand,
   QueryCommand,
+  TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { MatchmakingRepository } from "../../domain/model/matchmaking/matchmakingRepository.js";
 import { WaitingPlayer } from "../../domain/model/matchmaking/matchmaking.js";
@@ -112,5 +113,35 @@ export class MatchmakingDynamoDBRepository implements MatchmakingRepository {
         Key: { PK: "MATCHMAKING", SK: "ROULETTE" },
       })
     );
+  }
+
+  async claimMatchedPlayers(connectionIds: string[]): Promise<boolean> {
+    const transactItems = [
+      ...connectionIds.map((id) => ({
+        Delete: {
+          TableName: this.ctx.tableName,
+          Key: { PK: "MATCHMAKING", SK: `CONN#${id}` },
+          ConditionExpression: "attribute_exists(PK)",
+        },
+      })),
+      {
+        Delete: {
+          TableName: this.ctx.tableName,
+          Key: { PK: "MATCHMAKING", SK: "ROULETTE" },
+        },
+      },
+    ];
+
+    try {
+      await this.ctx.ddb.send(
+        new TransactWriteCommand({ TransactItems: transactItems })
+      );
+      return true;
+    } catch (err: any) {
+      if (err.name === "TransactionCanceledException") {
+        return false;
+      }
+      throw err;
+    }
   }
 }

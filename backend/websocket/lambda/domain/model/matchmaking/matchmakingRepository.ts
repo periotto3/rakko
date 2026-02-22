@@ -8,4 +8,5 @@ export interface MatchmakingRepository {
   getRouletteState(): Promise<RouletteSlot[]>;
   saveRouletteState(slots: RouletteSlot[], expectedSlotCount?: number): Promise<boolean>;
   deleteRouletteState(): Promise<void>;
+  claimMatchedPlayers(connectionIds: string[]): Promise<boolean>;
 }

@@ -82,14 +82,14 @@ export class JoinGameUseCase {
 
     const matchedPlayers = waiting.slice(0, 4);
 
-    // Remove matched players from queue immediately to prevent race conditions
-    // (e.g., 5th player joining during image generation seeing stale queue)
-    await Promise.all([
-      ...matchedPlayers.map((w) =>
-        this.matchmakingRepo.removePlayer(w.connectionId)
-      ),
-      this.matchmakingRepo.deleteRouletteState(),
-    ]);
+    // Atomically claim matched players to prevent race conditions
+    const claimed = await this.matchmakingRepo.claimMatchedPlayers(
+      matchedPlayers.map((w) => w.connectionId)
+    );
+    if (!claimed) {
+      console.info(JSON.stringify({ event: "match_already_claimed", connectionId }));
+      return;
+    }
 
     await Promise.all(
       matchedPlayers.map((w) =>

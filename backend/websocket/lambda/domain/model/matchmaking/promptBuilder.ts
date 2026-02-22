@@ -65,8 +65,7 @@ const ATMOSPHERE_FLAVORS = [
   "family-friendly tone",
 ];
 
-const NEGATIVE_CONSTRAINTS =
-  "avoid extra people, wrong player count, extra fingers, blurry face, text, logo, watermark, photorealistic look, revealing clothing, violence, weapons, blood";
+const QUALITY_KEYWORDS = "clean composition, high quality, detailed anime art";
 const PROMPT_MAX_LENGTH = 320;
 
 function pickRandom<T>(items: readonly T[]): T {
@@ -94,10 +93,10 @@ export function buildPrompt(slots: RouletteSlot[]): string {
   const atmosphereFlavor = pickRandom(ATMOSPHERE_FLAVORS);
 
   const fixedScene =
-    "Japanese anime Old Maid card game, safe and family-friendly, at a table, exactly three upper-body adult opponents, fully clothed, cards in hand";
+    "Japanese anime style illustration, Old Maid card game scene, four cheerful characters sitting around a table, holding playing cards, bright and colorful";
   const visibleLayer = `${who}, ${when}, ${where}, mood ${what}`;
   const hiddenLayer = `${styleFlavor}, ${lightingFlavor}, ${cameraFlavor}, ${atmosphereFlavor}`;
   const corePrompt = `${fixedScene}, ${visibleLayer}, ${hiddenLayer}, landscape`;
 
-  return trimToLimit(`${corePrompt}, ${NEGATIVE_CONSTRAINTS}`, PROMPT_MAX_LENGTH);
+  return trimToLimit(`${corePrompt}, ${QUALITY_KEYWORDS}`, PROMPT_MAX_LENGTH);
 }

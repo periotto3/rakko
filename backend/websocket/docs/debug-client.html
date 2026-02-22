@@ -317,7 +317,11 @@ class PlayerPanel {
       case 'images_ready': {
         this.generatingArea.style.display = '';
         this.generatingArea.innerHTML = '';
-        const urls = msg.imageUrls || [];
+        const urls = Array.isArray(msg.imageUrls)
+          ? msg.imageUrls
+          : (typeof msg.backgroundImage === 'string' && msg.backgroundImage)
+            ? [msg.backgroundImage]
+            : [];
         if (urls.length === 0) {
           this.generatingArea.innerHTML = '<div style="padding:8px;color:#e94560;font-size:13px;">画像の生成に失敗しました</div>';
         } else {

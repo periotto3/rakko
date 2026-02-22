@@ -56,8 +56,21 @@ function unwrapLambdaUrlResponse(data: unknown): unknown {
 }
 
 function extractImageUrls(data: unknown): string[] {
+  // Response is an array of objects (e.g. [{backgroundUrl: "..."}])
+  if (Array.isArray(data)) {
+    const urls = data
+      .filter(isRecord)
+      .map((item) => item.backgroundUrl ?? item.url)
+      .filter((url): url is string => typeof url === "string");
+    if (urls.length > 0) return urls;
+  }
+
   if (!isRecord(data)) {
     return [];
+  }
+
+  if (typeof data.backgroundUrl === "string") {
+    return [data.backgroundUrl];
   }
 
   if (Array.isArray(data.urls)) {
@@ -132,6 +145,14 @@ export class HttpImageGenerationService implements ImageGenerationService {
       const payload = unwrapLambdaUrlResponse(data);
       const urls = extractImageUrls(payload);
       if (urls.length === 0) {
+        console.error(
+          JSON.stringify({
+            event: "image_api_unexpected_response",
+            roomId,
+            rawResponsePreview: summarizeText(text, 1000),
+            payloadKeys: isRecord(payload) ? Object.keys(payload) : typeof payload,
+          })
+        );
         throw new Error("Image API response did not include image URLs");
       }
       console.info(
