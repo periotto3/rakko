@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card } from "../lib/types";
-import { BabanukiPlayer } from "../lib/types";
+import { Card, BabanukiPlayer, GameMode } from "../lib/types";
 import { JOKER_IMAGE_URL } from "../lib/constants";
 import PlayerAvatar from "./PlayerAvatar";
 import type {
@@ -14,6 +13,7 @@ import type {
 } from "../services/gameService";
 
 interface GamePlayScreenProps {
+  mode: GameMode;
   gameService: GameService;
   gameStartData: GameStartData;
   backgroundImage?: string;
@@ -188,7 +188,7 @@ function rankingsToPlayers(rankings: RankingData[]): BabanukiPlayer[] {
 
 /* ─── Main GamePlayScreen ─── */
 
-export default function GamePlayScreen({ gameService, gameStartData, backgroundImage, onGameEnd }: GamePlayScreenProps) {
+export default function GamePlayScreen({ mode, gameService, gameStartData, backgroundImage, onGameEnd }: GamePlayScreenProps) {
   const mySeatIndex = gameStartData.yourSeatIndex;
 
   const [yourHand, setYourHand] = useState<Card[]>(gameStartData.yourHand);
@@ -405,7 +405,7 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10">
         <span className="text-white font-bold text-sm">ババぬきしよう！</span>
-        <span className="text-[10px] text-white/40">{backgroundImage ? "CPUモード" : "オンライン対戦"}</span>
+        <span className="text-[10px] text-white/40">{mode === "online" ? "オンライン対戦" : "CPUモード"}</span>
         <button onClick={() => window.location.reload()} className="bg-red-600/80 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-bold">退室</button>
       </div>
 

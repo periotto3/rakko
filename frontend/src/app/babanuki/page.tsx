@@ -131,6 +131,7 @@ export default function BabanukiPage() {
     case "playing":
       return (
         <GamePlayScreen
+          mode={gameMode}
           gameService={gameService!}
           gameStartData={gameStartData!}
           backgroundImage={backgroundImage || undefined}
