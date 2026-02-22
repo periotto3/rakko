@@ -52,8 +52,8 @@ export default function BabanukiPage() {
     });
 
     service.onGenerating(() => {
-      setIsGenerating(true);
       setImageGenError(null);
+      setTimeout(() => setIsGenerating(true), 3000);
     });
 
     service.onImagesReady((urls) => {
