@@ -319,45 +319,32 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
           </div>
         )}
 
-        {/* Center - 丸机 */}
-        <div
-          className="absolute z-[15]"
-          style={{
-            left: "8%", right: "8%", top: "35%", bottom: "8%",
-            borderRadius: "50%",
-            background: "#D9C27A",
-            boxShadow: "0 10px 0 #A8903A, 0 14px 30px rgba(0,0,0,0.5)",
-          }}
-        >
-          <div className="absolute inset-0 flex items-center justify-center -translate-y-4">
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-bold text-center max-w-[200px] border border-white/10">
-                {message}
+        {/* Center - ステータス */}
+        <div className="absolute z-[15] flex items-center justify-center" style={{ left: "8%", right: "8%", top: "35%", bottom: "8%" }}>
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-bold text-center max-w-[200px] border border-white/10">
+              {message}
+            </div>
+            {lastDrawnInfo && (
+              <div className="bg-yellow-400/90 text-gray-900 px-2 py-0.5 rounded-lg text-xs font-bold shadow-lg animate-bounce">
+                {lastDrawnInfo}
               </div>
-              {lastDrawnInfo && (
-                <div className="bg-yellow-400/90 text-gray-900 px-2 py-0.5 rounded-lg text-xs font-bold shadow-lg animate-bounce">
-                  {lastDrawnInfo}
+            )}
+            <div className="flex gap-1 flex-wrap justify-center">
+              {players.map((p) => (
+                <div
+                  key={p.seatIndex}
+                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold
+                    ${currentTurnSeat === p.seatIndex ? "bg-yellow-400/80 text-gray-900" : "bg-black/40 text-white/80"}`}
+                >
+                  <PlayerAvatar src={p.avatar} name={p.name} size={10} />
+                  <span>
+                    {p.finishedOrder
+                      ? `${p.finishedOrder}位`
+                      : `${p.seatIndex === mySeatIndex ? yourHand.length : p.cardCount}`}
+                  </span>
                 </div>
-              )}
-              <div className="w-10 h-10 rounded-full bg-amber-100/90 border-4 border-amber-800 flex items-center justify-center shadow-lg">
-                <span className="text-lg">🕰</span>
-              </div>
-              <div className="flex gap-1 flex-wrap justify-center">
-                {players.map((p) => (
-                  <div
-                    key={p.seatIndex}
-                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold
-                      ${currentTurnSeat === p.seatIndex ? "bg-yellow-400/80 text-gray-900" : "bg-black/40 text-white/80"}`}
-                  >
-                    <PlayerAvatar src={p.avatar} name={p.name} size={10} />
-                    <span>
-                      {p.finishedOrder
-                        ? `${p.finishedOrder}位`
-                        : `${p.seatIndex === mySeatIndex ? yourHand.length : p.cardCount}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
         </div>
