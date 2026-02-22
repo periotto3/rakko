@@ -172,20 +172,20 @@ export function createPlayers(playerCount: number): BabanukiPlayer[] {
   return [human, ...cpus];
 }
 
-// Theme roulette data
-const THEME_WORK = ["フリーレン", "国宝", "ドラえもん", "スターウォーズ", "ハリーポッター"];
-const THEME_WHEN = ["古代", "中世", "近世", "現代", "未来"];
-const THEME_WHERE = ["日本", "東南アジア", "ヨーロッパ", "南米", "アフリカ", "宇宙"];
-const THEME_STYLE = ["アニメ", "水彩", "油絵", "スケッチ", "ドット絵", "ジブリ"];
+// Theme roulette data (Backend: who/when/where/what)
+const THEME_WHO = ["Aさんが", "Bさんが", "Cさんが", "みんなで", "あなたが"];
+const THEME_WHEN = ["社会人のとき", "子供のとき", "夏休みに", "深夜に", "朝一で"];
+const THEME_WHERE = ["家で", "学校で", "海辺で", "宇宙で", "森の中で"];
+const THEME_WHAT = ["さみしかった話", "笑った話", "驚いた話", "冒険した話", "食べた話"];
 
 export function spinRoulette(): ThemeSlot {
   const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
   return {
-    work: pick(THEME_WORK),
+    who: pick(THEME_WHO),
     when: pick(THEME_WHEN),
     where: pick(THEME_WHERE),
-    style: pick(THEME_STYLE),
+    what: pick(THEME_WHAT),
   };
 }
 
-export { THEME_WORK, THEME_WHEN, THEME_WHERE, THEME_STYLE };
+export { THEME_WHO, THEME_WHEN, THEME_WHERE, THEME_WHAT };

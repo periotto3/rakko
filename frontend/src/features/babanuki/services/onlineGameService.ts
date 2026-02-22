@@ -5,6 +5,7 @@ import {
   CardDrawnData,
   RankingData,
   PublicPlayerData,
+  RouletteSlotData,
 } from "./gameService";
 import { WEBSOCKET_ORIGIN } from "./websocket";
 import { backendCardToFrontendCard, BackendCard } from "../lib/cardMapping";
@@ -29,18 +30,24 @@ export class OnlineGameService implements GameService {
   private playerName = "";
 
   private waitingCb?: (waitingCount: number) => void;
+  private waitingSlotCb?: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void;
   private gameStartCb?: (data: GameStartData) => void;
   private gameStateCb?: (data: GameStateData) => void;
   private cardDrawnCb?: (data: CardDrawnData) => void;
   private gameOverCb?: (rankings: RankingData[]) => void;
+  private generatingCb?: () => void;
+  private imagesReadyCb?: (imageUrls: string[]) => void;
   private errorCb?: (message: string) => void;
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
   onWaitingPlayers(): void { /* オンラインは待機中プレイヤー情報なし */ }
+  onWaitingSlot(cb: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void): void { this.waitingSlotCb = cb; }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
   onGameOver(cb: (rankings: RankingData[]) => void): void { this.gameOverCb = cb; }
+  onGenerating(cb: () => void): void { this.generatingCb = cb; }
+  onImagesReady(cb: (imageUrls: string[]) => void): void { this.imagesReadyCb = cb; }
   onError(cb: (message: string) => void): void { this.errorCb = cb; }
 
   join(playerName: string): void {
@@ -96,9 +103,15 @@ export class OnlineGameService implements GameService {
 
   private handleMessage(msg: Record<string, unknown>): void {
     switch (msg.type) {
-      case "waiting":
+      case "waiting": {
         this.waitingCb?.(msg.waitingCount as number);
+        const newSlot = msg.newSlot as RouletteSlotData | null;
+        if (newSlot) {
+          const allSlots = msg.decidedSlots as RouletteSlotData[];
+          this.waitingSlotCb?.(newSlot, allSlots);
+        }
         break;
+      }
 
       case "game_start": {
         const yourHand = (msg.yourHand as BackendCard[]).map(backendCardToFrontendCard);
@@ -132,6 +145,16 @@ export class OnlineGameService implements GameService {
       case "game_over":
         this.gameOverCb?.(assignAvatars(msg.rankings as RankingData[]));
         break;
+
+      case "generating":
+        this.generatingCb?.();
+        break;
+
+      case "images_ready": {
+        const bgImage = msg.backgroundImage as string | undefined;
+        this.imagesReadyCb?.(bgImage ? [bgImage] : []);
+        break;
+      }
 
       case "error":
         this.errorCb?.(msg.message as string);

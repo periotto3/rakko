@@ -35,6 +35,13 @@ export interface RankingData {
   rank: number; // 1=1位(勝ち), 4=4位(負け)
 }
 
+/** ルーレットで1つのスロットが確定したときのデータ */
+export interface RouletteSlotData {
+  key: "who" | "when" | "where" | "what";
+  value: string;
+  slotIndex: number; // 0〜3
+}
+
 /**
  * ゲームサービスのインターフェース。
  * CPU実装とオンライン実装を同一のインターフェースで差し替え可能にする（DIP）。
@@ -51,6 +58,8 @@ export interface GameService {
   onWaiting(cb: (waitingCount: number) => void): void;
   /** 待機中プレイヤー一覧更新（CPUモード: 1人ずつ追加, オンライン: no-op） */
   onWaitingPlayers(cb: (players: BabanukiPlayer[]) => void): void;
+  /** ルーレットスロットが1つ確定（プレイヤーが1人参加するたびに1スロット確定） */
+  onWaitingSlot(cb: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void): void;
   /** ゲーム開始（4人揃った） */
   onGameStart(cb: (data: GameStartData) => void): void;
   /** ゲーム状態更新（ターン進行ごと） */
@@ -59,6 +68,10 @@ export interface GameService {
   onCardDrawn(cb: (data: CardDrawnData) => void): void;
   /** ゲーム終了 */
   onGameOver(cb: (rankings: RankingData[]) => void): void;
+  /** 画像生成開始（スピナー表示用） */
+  onGenerating(cb: () => void): void;
+  /** 画像生成完了（URLリスト）。空配列の場合は生成失敗 */
+  onImagesReady(cb: (imageUrls: string[]) => void): void;
   /** エラー */
   onError(cb: (message: string) => void): void;
 

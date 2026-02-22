@@ -26,6 +26,8 @@ export default function BabanukiPage() {
   const [winner, setWinner] = useState<BabanukiPlayer | null>(null);
   const [finalPlayers, setFinalPlayers] = useState<BabanukiPlayer[]>([]);
   const [backgroundImage, setBackgroundImage] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [imageGenError, setImageGenError] = useState<string | null>(null);
   const [gameService, setGameService] = useState<GameService | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("cpu");
   const [gameStartData, setGameStartData] = useState<GameStartData | null>(null);
@@ -47,6 +49,20 @@ export default function BabanukiPage() {
 
     service.onWaitingPlayers((ps) => {
       setPlayers(ps);
+    });
+
+    service.onGenerating(() => {
+      setImageGenError(null);
+      setTimeout(() => setIsGenerating(true), 3000);
+    });
+
+    service.onImagesReady((urls) => {
+      setIsGenerating(false);
+      if (urls.length > 0) {
+        setBackgroundImage(urls[0]);
+      } else {
+        setImageGenError("画像の生成に失敗しました");
+      }
     });
 
     service.join(playerName ?? "プレイヤー");
@@ -80,6 +96,8 @@ export default function BabanukiPage() {
     setWinner(null);
     setFinalPlayers([]);
     setBackgroundImage("");
+    setIsGenerating(false);
+    setImageGenError(null);
     setGameStartData(null);
     setRankings(null);
     setPhase("title");
@@ -97,6 +115,8 @@ export default function BabanukiPage() {
           players={players}
           maxPlayers={MAX_PLAYERS}
           onThemeDecided={handleThemeDecided}
+          isGenerating={isGenerating}
+          imageGenError={imageGenError}
         />
       );
 
