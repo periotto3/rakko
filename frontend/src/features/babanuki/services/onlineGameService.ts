@@ -33,6 +33,8 @@ export class OnlineGameService implements GameService {
   private gameStateCb?: (data: GameStateData) => void;
   private cardDrawnCb?: (data: CardDrawnData) => void;
   private gameOverCb?: (rankings: RankingData[]) => void;
+  private generatingCb?: () => void;
+  private imagesReadyCb?: (imageUrls: string[]) => void;
   private errorCb?: (message: string) => void;
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
@@ -41,6 +43,8 @@ export class OnlineGameService implements GameService {
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
   onGameOver(cb: (rankings: RankingData[]) => void): void { this.gameOverCb = cb; }
+  onGenerating(cb: () => void): void { this.generatingCb = cb; }
+  onImagesReady(cb: (imageUrls: string[]) => void): void { this.imagesReadyCb = cb; }
   onError(cb: (message: string) => void): void { this.errorCb = cb; }
 
   join(playerName: string): void {
@@ -132,6 +136,16 @@ export class OnlineGameService implements GameService {
       case "game_over":
         this.gameOverCb?.(assignAvatars(msg.rankings as RankingData[]));
         break;
+
+      case "generating":
+        this.generatingCb?.();
+        break;
+
+      case "images_ready": {
+        const bgImage = msg.backgroundImage as string | undefined;
+        this.imagesReadyCb?.(bgImage ? [bgImage] : []);
+        break;
+      }
 
       case "error":
         this.errorCb?.(msg.message as string);

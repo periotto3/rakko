@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "../lib/types";
 import { BabanukiPlayer } from "../lib/types";
 import { JOKER_IMAGE_URL } from "../lib/constants";
@@ -177,6 +177,8 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
       : `${gameStartData.players.find(p => p.seatIndex === gameStartData.currentTurnSeat)?.name ?? "?"}のターン...`
   );
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
+  const [errorLog, setErrorLog] = useState<{ id: number; msg: string }[]>([]);
+  const errorIdRef = useRef(0);
 
   useEffect(() => {
     gameService.onGameState((data) => {
@@ -212,7 +214,11 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
     });
 
     gameService.onError((msg) => {
-      setMessage(`エラー: ${msg}`);
+      const id = ++errorIdRef.current;
+      setErrorLog((prev) => [...prev, { id, msg }]);
+      setTimeout(() => {
+        setErrorLog((prev) => prev.filter((e) => e.id !== id));
+      }, 5000);
     });
   }, [gameService]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -252,6 +258,21 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
             : { backgroundImage: `url(/backgrounds/background.png)`, backgroundSize: "cover", backgroundPosition: "center" }
         }
       />
+
+      {/* Error toasts */}
+      {errorLog.length > 0 && (
+        <div className="absolute top-14 right-3 z-50 flex flex-col gap-1 max-w-[260px]">
+          {errorLog.map((e) => (
+            <div
+              key={e.id}
+              className="flex items-start gap-2 bg-red-600/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-2 rounded-lg shadow-lg border border-red-400/50 animate-pulse"
+            >
+              <span className="shrink-0">⚠</span>
+              <span>{e.msg}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10">
