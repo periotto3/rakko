@@ -31,15 +31,21 @@ const SUIT_COLORS: Record<string, string> = {
 
 /* ─── Card Components ─── */
 
-function CardFace({ card, highlighted, large }: { card: Card; highlighted?: boolean; large?: boolean }) {
+function CardFace({ card, highlighted, large, isJustDrawn }: { card: Card; highlighted?: boolean; large?: boolean; isJustDrawn?: boolean }) {
   const isJoker = card.suit === "joker";
   const color = SUIT_COLORS[card.suit];
   return (
     <div
-      className={`relative ${large ? "w-[78px] h-[111px]" : "w-[52px] h-[74px]"} rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0 transition-transform duration-200
-        ${highlighted ? "border-2 border-yellow-400 ring-2 ring-yellow-300 scale-110 -translate-y-2" : "border border-gray-300"}`}
+      className={`relative ${large ? "w-[78px] h-[111px]" : "w-[52px] h-[74px]"} rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0
+        ${isJustDrawn ? "animate-card-arrive" : "transition-transform duration-200"}
+        ${highlighted || isJustDrawn ? "border-2 border-yellow-400 ring-2 ring-yellow-300 scale-110 -translate-y-2" : "border border-gray-300"}`}
       style={{ background: isJoker ? "linear-gradient(135deg, #faf5ff, #fce7f3)" : "linear-gradient(135deg, #ffffff, #f8f8f8)" }}
     >
+      {isJustDrawn && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-900 text-[8px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap z-10">
+          引いた！
+        </div>
+      )}
       {isJoker ? (
         <>
           <span className={`${large ? "text-3xl" : "text-xl"} leading-none`}>💸</span>
@@ -183,45 +189,54 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
   const [errorLog, setErrorLog] = useState<{ id: number; msg: string }[]>([]);
   const [clickedCardIndex, setClickedCardIndex] = useState<number | null>(null);
-  const [drawnCardPreview, setDrawnCardPreview] = useState<Card | null>(null);
-  const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
+  const [justDrawnCardId, setJustDrawnCardId] = useState<string | null>(null);
+  const [pairAnimation, setPairAnimation] = useState<{ card: Card; timestamp: number } | null>(null);
   const errorIdRef = useRef(0);
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pairTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevHandRef = useRef<Card[]>(gameStartData.yourHand);
   const lastPairedRef = useRef<boolean>(false);
 
   useEffect(() => {
     return () => {
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+      if (pairTimeoutRef.current) clearTimeout(pairTimeoutRef.current);
     };
   }, []);
 
   useEffect(() => {
     gameService.onGameState((data) => {
       const newHand = data.yourHand;
+      const prevHand = prevHandRef.current;
 
       // Detect newly drawn card (if I just finished my turn)
       if (data.currentTurnSeat !== mySeatIndex) {
         const addedCards = newHand.filter(
-          card => !prevHandRef.current.some(c => c.id === card.id)
+          card => !prevHand.some(c => c.id === card.id)
+        );
+        const removedCards = prevHand.filter(
+          card => !newHand.some(c => c.id === card.id)
         );
 
-        if (addedCards.length > 0) {
-          const drawnCard = addedCards[0];
-          setDrawnCardPreview(drawnCard);
+        if (lastPairedRef.current && removedCards.length > 0) {
+          // Pair was formed - show pair animation in center
+          const pairCard = removedCards[0];
+          setPairAnimation({ card: pairCard, timestamp: Date.now() });
 
-          // Check if this card forms a pair with existing cards
-          if (lastPairedRef.current) {
-            // A pair was formed - highlight the matching rank
-            setHighlightedRank(drawnCard.rank);
-          }
-
-          // Clear preview and highlight after animation
-          setTimeout(() => {
-            setDrawnCardPreview(null);
-            setHighlightedRank(null);
+          // Clear pair animation after 2 seconds
+          pairTimeoutRef.current = setTimeout(() => {
+            setPairAnimation(null);
             lastPairedRef.current = false;
-          }, 1200);
+          }, 2000);
+        } else if (addedCards.length > 0) {
+          // Normal draw - highlight the new card in hand
+          const drawnCard = addedCards[0];
+          setJustDrawnCardId(drawnCard.id);
+
+          // Clear highlight after 1 second
+          setTimeout(() => {
+            setJustDrawnCardId(null);
+          }, 1000);
         }
       }
 
@@ -314,8 +329,15 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
           65%  { transform: translateY(6px) scale(1.1);  opacity: 1; }
           100% { transform: translateY(0) scale(1);      opacity: 1; }
         }
+        @keyframes pair-show {
+          0%   { opacity: 0; transform: scale(0.5) translateY(-20px); }
+          15%  { opacity: 1; transform: scale(1.1) translateY(0); }
+          85%  { opacity: 1; transform: scale(1) translateY(0); }
+          100% { opacity: 0; transform: scale(0.8) translateY(20px); }
+        }
         .animate-card-lift { animation: card-lift 0.55s ease-in forwards; }
         .animate-card-arrive { animation: card-arrive 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .animate-pair-show { animation: pair-show 2s ease-out forwards; }
       `}</style>
       <div className="h-screen flex flex-col relative overflow-hidden select-none">
         {/* Background */}
@@ -340,6 +362,25 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
               <span>{e.msg}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pair animation */}
+      {pairAnimation && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="animate-pair-show flex flex-col items-center">
+            <div className="text-yellow-400 text-3xl font-bold mb-4 drop-shadow-lg">
+              ペアを捨てた！
+            </div>
+            <div className="relative" style={{ width: '120px', height: '111px' }}>
+              <div className="absolute left-0 top-0" style={{ transform: 'rotate(-8deg)' }}>
+                <CardFace card={pairAnimation.card} large />
+              </div>
+              <div className="absolute right-0 top-0" style={{ transform: 'rotate(8deg)' }}>
+                <CardFace card={pairAnimation.card} large />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -438,27 +479,15 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
             <div className="text-white text-sm font-bold">{myPlayer?.name ?? "あなた"}</div>
           </div>
           {yourHand.length > 0 ? (
-            <div className="flex gap-2 items-center flex-nowrap justify-center max-w-[90vw] overflow-x-auto">
-              <div className="flex gap-1">
-                {yourHand.map((card) => (
-                  <CardFace
-                    key={card.id}
-                    card={card}
-                    large
-                    highlighted={highlightedRank !== null && card.rank === highlightedRank}
-                  />
-                ))}
-              </div>
-              {drawnCardPreview && (
-                <div key={drawnCardPreview.id} className="flex flex-col items-center gap-0.5 shrink-0 animate-card-arrive">
-                  <span className="text-[9px] text-yellow-300 font-bold">引いた！</span>
-                  <CardFace
-                    card={drawnCardPreview}
-                    large
-                    highlighted={highlightedRank !== null}
-                  />
-                </div>
-              )}
+            <div className="flex gap-1 flex-nowrap justify-center max-w-[90vw] overflow-x-auto">
+              {yourHand.map((card) => (
+                <CardFace
+                  key={card.id}
+                  card={card}
+                  large
+                  isJustDrawn={justDrawnCardId === card.id}
+                />
+              ))}
             </div>
           ) : (
             <div className="text-center text-green-400 font-bold text-lg py-4">
