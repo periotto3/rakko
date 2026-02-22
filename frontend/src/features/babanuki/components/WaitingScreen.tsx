@@ -19,6 +19,9 @@ interface WaitingScreenProps {
   // CPU モード専用
   players: BabanukiPlayer[];
   onThemeDecided: (theme: ThemeSlot) => void;
+  // オンラインモード専用
+  isGenerating?: boolean;
+  imageGenError?: string | null;
 }
 
 const SLOT_KEYS: (keyof ThemeSlot)[] = ["work", "when", "where", "style"];
@@ -95,6 +98,8 @@ export default function WaitingScreen({
   players,
   maxPlayers,
   onThemeDecided,
+  isGenerating = false,
+  imageGenError = null,
 }: WaitingScreenProps) {
   // オンラインモード用：待機人数
   const [waitingCount, setWaitingCount] = useState(1);
@@ -144,6 +149,36 @@ export default function WaitingScreen({
   // オンラインモード：シンプルな待機画面
   if (mode === "online") {
     const AVATARS = ["/avatars/user.png", "/avatars/cpu_1.png", "/avatars/cpu_2.png", "/avatars/cpu_3.png"];
+
+    // 画像生成エラー
+    if (imageGenError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-red-600 mb-2">エラーが発生しました</h1>
+          <p className="text-gray-500 mb-8">{imageGenError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-xl text-sm transition-all"
+          >
+            もう一度試す
+          </button>
+        </div>
+      );
+    }
+
+    // 画像生成中
+    if (isGenerating) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+          <div className="w-14 h-14 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-6" />
+          <h1 className="text-2xl font-bold mb-2">背景画像を生成中...</h1>
+          <p className="text-gray-400 text-sm">AIがゲーム用の画像を作成しています</p>
+        </div>
+      );
+    }
+
+    // マッチング待機中
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
         <h1 className="text-3xl font-bold mb-2">

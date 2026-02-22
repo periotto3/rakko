@@ -52,6 +52,8 @@ export class CpuGameService implements GameService {
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
   onGameOver(cb: (rankings: RankingData[]) => void): void { this.gameOverCb = cb; }
+  onGenerating(_cb: () => void): void { /* CPUモードでは画像生成なし */ }
+  onImagesReady(_cb: (imageUrls: string[]) => void): void { /* CPUモードでは画像生成なし */ }
   onError(cb: (message: string) => void): void { this.errorCb = cb; }
 
   join(playerName: string): void {

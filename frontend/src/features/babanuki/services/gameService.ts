@@ -59,6 +59,10 @@ export interface GameService {
   onCardDrawn(cb: (data: CardDrawnData) => void): void;
   /** ゲーム終了 */
   onGameOver(cb: (rankings: RankingData[]) => void): void;
+  /** 画像生成開始（スピナー表示用） */
+  onGenerating(cb: () => void): void;
+  /** 画像生成完了（URLリスト）。空配列の場合は生成失敗 */
+  onImagesReady(cb: (imageUrls: string[]) => void): void;
   /** エラー */
   onError(cb: (message: string) => void): void;
 
