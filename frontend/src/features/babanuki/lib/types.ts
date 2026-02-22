@@ -27,10 +27,10 @@ export type GamePhase =
 export type GameMode = "cpu" | "online";
 
 export interface ThemeSlot {
-  work: string;  // 作品
+  who: string;   // だれが
   when: string;  // いつ
   where: string; // どこで
-  style: string; // 画風
+  what: string;  // なにを
 }
 
 export interface BabanukiState {
