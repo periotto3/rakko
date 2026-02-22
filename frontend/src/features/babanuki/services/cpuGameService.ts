@@ -5,6 +5,10 @@ import {
   getNextActivePlayer,
   isGameOver,
   dealCards,
+  THEME_WHO,
+  THEME_WHEN,
+  THEME_WHERE,
+  THEME_WHAT,
 } from "../lib/engine";
 import { BabanukiPlayer } from "../lib/types";
 import {
@@ -14,6 +18,7 @@ import {
   CardDrawnData,
   RankingData,
   PublicPlayerData,
+  RouletteSlotData,
 } from "./gameService";
 
 const CPU_PLAYERS = [
@@ -23,6 +28,13 @@ const CPU_PLAYERS = [
 ];
 
 const JOIN_DELAYS = [500, 3000, 5500, 8000];
+
+const SLOT_SEQUENCE: Array<{ key: RouletteSlotData["key"]; items: string[] }> = [
+  { key: "who",   items: THEME_WHO },
+  { key: "when",  items: THEME_WHEN },
+  { key: "where", items: THEME_WHERE },
+  { key: "what",  items: THEME_WHAT },
+];
 
 /**
  * CPU（オフライン）モードの GameService 実装。
@@ -40,6 +52,7 @@ export class CpuGameService implements GameService {
 
   private waitingCb?: (waitingCount: number) => void;
   private waitingPlayersCb?: (players: BabanukiPlayer[]) => void;
+  private waitingSlotCb?: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void;
   private gameStartCb?: (data: GameStartData) => void;
   private gameStateCb?: (data: GameStateData) => void;
   private cardDrawnCb?: (data: CardDrawnData) => void;
@@ -48,6 +61,7 @@ export class CpuGameService implements GameService {
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
   onWaitingPlayers(cb: (players: BabanukiPlayer[]) => void): void { this.waitingPlayersCb = cb; }
+  onWaitingSlot(cb: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void): void { this.waitingSlotCb = cb; }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
@@ -63,10 +77,18 @@ export class CpuGameService implements GameService {
     ];
     this.pendingPlayers = allPlayers;
 
+    const decidedSlots: RouletteSlotData[] = [];
+
     allPlayers.forEach((_, i) => {
       const timer = setTimeout(() => {
         this.waitingCb?.(i + 1);
         this.waitingPlayersCb?.(allPlayers.slice(0, i + 1));
+
+        const { key, items } = SLOT_SEQUENCE[i];
+        const value = items[Math.floor(Math.random() * items.length)];
+        const slot: RouletteSlotData = { key, value, slotIndex: i };
+        decidedSlots.push(slot);
+        this.waitingSlotCb?.(slot, [...decidedSlots]);
       }, JOIN_DELAYS[i]);
       this.timers.push(timer);
     });
