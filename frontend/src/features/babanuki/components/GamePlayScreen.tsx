@@ -31,37 +31,50 @@ const SUIT_COLORS: Record<string, string> = {
 
 /* ─── Card Components ─── */
 
-function CardFace({ card, highlighted, large, isJustDrawn }: { card: Card; highlighted?: boolean; large?: boolean; isJustDrawn?: boolean }) {
+function CardFace({ card, highlighted, large, xlarge, isJustDrawn }: { card: Card; highlighted?: boolean; large?: boolean; xlarge?: boolean; isJustDrawn?: boolean }) {
   const isJoker = card.suit === "joker";
   const color = SUIT_COLORS[card.suit];
+  const size = xlarge ? "xlarge" : large ? "large" : "normal";
+  const sizeClasses = {
+    xlarge: "w-[104px] h-[148px]",
+    large: "w-[78px] h-[111px]",
+    normal: "w-[52px] h-[74px]",
+  };
+  const iconSizes = {
+    xlarge: { emoji: "text-4xl", label: "text-[12px]", rank: "text-[14px]", image: 60 },
+    large: { emoji: "text-3xl", label: "text-[10px]", rank: "text-[12px]", image: 45 },
+    normal: { emoji: "text-xl", label: "text-[7px]", rank: "text-[8px]", image: 30 },
+  };
+  const s = iconSizes[size];
+
   return (
     <div
-      className={`relative ${large ? "w-[78px] h-[111px]" : "w-[52px] h-[74px]"} rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0
+      className={`relative ${sizeClasses[size]} rounded-lg shadow-lg flex flex-col items-center justify-center select-none shrink-0
         ${isJustDrawn ? "animate-card-arrive" : "transition-transform duration-200"}
         ${highlighted || isJustDrawn ? "border-2 border-yellow-400 ring-2 ring-yellow-300 scale-110 -translate-y-2" : "border border-gray-300"}`}
       style={{ background: isJoker ? "linear-gradient(135deg, #faf5ff, #fce7f3)" : "linear-gradient(135deg, #ffffff, #f8f8f8)" }}
     >
       {isJustDrawn && (
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-900 text-[8px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap z-10">
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-900 ${xlarge ? "text-[10px]" : "text-[8px]"} font-bold px-2 py-1 rounded-full whitespace-nowrap z-10 shadow-lg`}>
           引いた！
         </div>
       )}
       {isJoker ? (
         <>
-          <span className={`${large ? "text-3xl" : "text-xl"} leading-none`}>💸</span>
-          <span className={`${large ? "text-[10px]" : "text-[7px]"} font-bold`} style={{ color: "#7c3aed" }}>請求書</span>
+          <span className={`${s.emoji} leading-none`}>💸</span>
+          <span className={`${s.label} font-bold`} style={{ color: "#7c3aed" }}>請求書</span>
         </>
       ) : (
         <>
-          <span className={`${large ? "text-[12px]" : "text-[8px]"} font-bold leading-none absolute top-0.5 left-1`} style={{ color }}>
+          <span className={`${s.rank} font-bold leading-none absolute top-0.5 left-1`} style={{ color }}>
             {card.label}
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={card.imageUrl}
             alt={card.label}
-            width={large ? 45 : 30}
-            height={large ? 45 : 30}
+            width={s.image}
+            height={s.image}
             className="object-contain"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -69,7 +82,7 @@ function CardFace({ card, highlighted, large, isJustDrawn }: { card: Card; highl
               if (fallback) fallback.style.display = "block";
             }}
           />
-          <span className={`${large ? "text-3xl" : "text-xl"} leading-none hidden`} style={{ color }}>
+          <span className={`${s.emoji} leading-none hidden`} style={{ color }}>
             {SUIT_SYMBOLS[card.suit]}
           </span>
         </>
@@ -335,9 +348,14 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
           85%  { opacity: 1; transform: scale(1) translateY(0); }
           100% { opacity: 0; transform: scale(0.8) translateY(20px); }
         }
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(250, 204, 21, 0.5), 0 0 40px rgba(250, 204, 21, 0.3); }
+          50%      { box-shadow: 0 0 30px rgba(250, 204, 21, 0.8), 0 0 60px rgba(250, 204, 21, 0.5); }
+        }
         .animate-card-lift { animation: card-lift 0.55s ease-in forwards; }
         .animate-card-arrive { animation: card-arrive 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         .animate-pair-show { animation: pair-show 2s ease-out forwards; }
+        .animate-glow { animation: glow 2s ease-in-out infinite; }
       `}</style>
       <div className="h-screen flex flex-col relative overflow-hidden select-none">
         {/* Background */}
@@ -368,16 +386,16 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
       {/* Pair animation */}
       {pairAnimation && (
         <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-          <div className="animate-pair-show flex flex-col items-center">
-            <div className="text-yellow-400 text-3xl font-bold mb-4 drop-shadow-lg">
+          <div className="animate-pair-show flex flex-col items-center bg-black/70 backdrop-blur-md px-12 py-8 rounded-3xl border-2 border-yellow-400/50">
+            <div className="text-yellow-400 text-5xl font-bold mb-6 drop-shadow-2xl tracking-wide">
               ペアを捨てた！
             </div>
-            <div className="relative" style={{ width: '120px', height: '111px' }}>
-              <div className="absolute left-0 top-0" style={{ transform: 'rotate(-8deg)' }}>
-                <CardFace card={pairAnimation.card} large />
+            <div className="relative" style={{ width: '160px', height: '148px' }}>
+              <div className="absolute left-0 top-0 drop-shadow-2xl" style={{ transform: 'rotate(-10deg)' }}>
+                <CardFace card={pairAnimation.card} xlarge />
               </div>
-              <div className="absolute right-0 top-0" style={{ transform: 'rotate(8deg)' }}>
-                <CardFace card={pairAnimation.card} large />
+              <div className="absolute right-0 top-0 drop-shadow-2xl" style={{ transform: 'rotate(10deg)' }}>
+                <CardFace card={pairAnimation.card} xlarge />
               </div>
             </div>
           </div>
@@ -432,65 +450,48 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
           </div>
         )}
 
-        {/* Center - ステータス */}
-        <div className="absolute z-[15] flex items-center justify-center" style={{ left: "8%", right: "8%", top: "35%", bottom: "8%" }}>
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-bold text-center max-w-[200px] border border-white/10">
-              {message}
-            </div>
-            {lastDrawnInfo && (
-              <div className="bg-yellow-400/90 text-gray-900 px-2 py-0.5 rounded-lg text-xs font-bold shadow-lg animate-bounce">
-                {lastDrawnInfo}
-              </div>
-            )}
-            <div className="flex gap-1 flex-wrap justify-center">
-              {players.map((p) => (
-                <div
-                  key={p.seatIndex}
-                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold
-                    ${currentTurnSeat === p.seatIndex ? "bg-yellow-400/80 text-gray-900" : "bg-black/40 text-white/80"}`}
-                >
-                  <PlayerAvatar src={p.avatar} name={p.name} size={10} />
-                  <span>
-                    {p.finishedOrder
-                      ? `${p.finishedOrder}位`
-                      : `${p.seatIndex === mySeatIndex ? yourHand.length : p.cardCount}`}
-                  </span>
-                </div>
-              ))}
-            </div>
+        {/* ターン表示 - 左上 */}
+        <div className="absolute z-[15] top-16 left-4">
+          <div className={`backdrop-blur-md px-6 py-3 rounded-2xl text-base font-bold border-2 ${
+            isMyTurn
+              ? "bg-yellow-400 text-gray-900 border-yellow-500 animate-glow"
+              : "bg-black/80 text-white border-white/20 shadow-2xl"
+          }`}>
+            {message}
           </div>
         </div>
 
+        {/* アクションログ - 右上 */}
+        {lastDrawnInfo && (
+          <div className="absolute z-[15] top-16 right-4">
+            <div className="bg-yellow-400 text-gray-900 px-4 py-2 rounded-xl text-sm font-bold shadow-xl animate-bounce border-2 border-yellow-500">
+              {lastDrawnInfo}
+            </div>
+          </div>
+        )}
+
         {/* Bottom - my hand */}
         <div className="absolute z-20" style={{ bottom: "1%", left: "50%", transform: "translateX(-50%)" }}>
-          {isMyTurn && (
-            <div className="text-center mb-1">
-              <span className="bg-yellow-400 text-gray-900 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
-                YOUR TURN
-              </span>
+          <div className="flex items-center gap-3 mb-2 justify-center">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg
+              ${isMyTurn ? "border-yellow-400 bg-yellow-900/40" : "border-white/20 bg-black/30"}`}>
+              <PlayerAvatar src={myPlayer?.avatar ?? ""} name={myPlayer?.name ?? "あなた"} size={40} />
             </div>
-          )}
-          <div className="flex items-center gap-2 mb-1">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 shadow
-              ${isMyTurn ? "border-yellow-400 bg-yellow-900/30" : "border-white/20 bg-black/30"}`}>
-              <PlayerAvatar src={myPlayer?.avatar ?? ""} name={myPlayer?.name ?? "あなた"} size={32} />
-            </div>
-            <div className="text-white text-sm font-bold">{myPlayer?.name ?? "あなた"}</div>
+            <div className="text-white text-base font-bold">{myPlayer?.name ?? "あなた"}</div>
           </div>
           {yourHand.length > 0 ? (
-            <div className="flex gap-1 flex-nowrap justify-center max-w-[90vw] overflow-x-auto">
+            <div className="flex gap-2 flex-nowrap justify-center max-w-[95vw] overflow-x-auto pb-2">
               {yourHand.map((card) => (
                 <CardFace
                   key={card.id}
                   card={card}
-                  large
+                  xlarge
                   isJustDrawn={justDrawnCardId === card.id}
                 />
               ))}
             </div>
           ) : (
-            <div className="text-center text-green-400 font-bold text-lg py-4">
+            <div className="text-center text-green-400 font-bold text-2xl py-6">
               &#x2714; 上がり!
             </div>
           )}
