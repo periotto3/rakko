@@ -10,7 +10,7 @@ import {
   THEME_WHAT,
 } from "../lib/engine";
 import type { GameMode } from "../lib/types";
-import type { GameService } from "../services/gameService";
+import type { GameService, RouletteSlotData } from "../services/gameService";
 
 interface WaitingScreenProps {
   mode: GameMode;
@@ -108,10 +108,9 @@ export default function WaitingScreen({
   isGenerating = false,
   imageGenError = null,
 }: WaitingScreenProps) {
-  // オンラインモード用：待機人数
   const [waitingCount, setWaitingCount] = useState(1);
-  const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
-  const [nextSlotIndex, setNextSlotIndex] = useState(0);
+  // 確定済みスロット一覧（decidedSlots ベースで管理）
+  const [lockedSlots, setLockedSlots] = useState<RouletteSlotData[]>([]);
   const [theme, setTheme] = useState<ThemeSlot>({
     who: THEME_WHO[0],
     when: THEME_WHEN[0],
@@ -119,6 +118,7 @@ export default function WaitingScreen({
     what: THEME_WHAT[0],
   });
   const [decided, setDecided] = useState(false);
+  const pendingSlotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // オンラインモード：待機人数を購読
   useEffect(() => {
@@ -128,12 +128,21 @@ export default function WaitingScreen({
 
   // CPU/Online 共通：スロット確定イベントを購読
   useEffect(() => {
-    gameService.onWaitingSlot((slot) => {
-      setSpinningSlot(slot.slotIndex);
-      setTimeout(() => {
-        setTheme((prev) => ({ ...prev, [slot.key]: slot.value }));
-        setSpinningSlot(null);
-        setNextSlotIndex(slot.slotIndex + 1);
+    gameService.onWaitingSlot((slot, allSlots) => {
+      // 古いタイマーをキャンセルして状態の巻き戻しを防止
+      if (pendingSlotTimerRef.current) clearTimeout(pendingSlotTimerRef.current);
+      // 確定済み値を theme に反映
+      setTheme((prev) => {
+        const next = { ...prev };
+        allSlots.forEach((s) => { (next as Record<string, string>)[s.key] = s.value; });
+        return next;
+      });
+      // 新スロット以外は即座にロック（再参加などで複数スロット確定済みの場合に対応）
+      setLockedSlots(allSlots.filter((s) => s.slotIndex !== slot.slotIndex));
+      // 新スロットは 1500ms アニメーション後にロック
+      pendingSlotTimerRef.current = setTimeout(() => {
+        setLockedSlots(allSlots);
+        pendingSlotTimerRef.current = null;
       }, 1500);
     });
   }, [gameService]);
@@ -143,10 +152,9 @@ export default function WaitingScreen({
     onThemeDecided(theme);
   };
 
-  // 表示用の人数（CPU: players.length, Online: waitingCount）
   const displayCount = mode === "cpu" ? players.length : waitingCount;
   const allJoined = displayCount >= maxPlayers;
-  const allSlotsLocked = nextSlotIndex >= SLOT_KEYS.length;
+  const allSlotsLocked = lockedSlots.length >= SLOT_KEYS.length;
 
 
   // オンライン：画像生成エラー
@@ -229,9 +237,9 @@ export default function WaitingScreen({
             <SlotReel
               key={key}
               items={SLOT_ITEMS[key]}
-              spinning={spinningSlot === i}
+              spinning={!lockedSlots.some((s) => s.key === key)}
               finalValue={theme[key]}
-              locked={i < nextSlotIndex}
+              locked={lockedSlots.some((s) => s.key === key)}
               label={SLOT_LABELS[key]}
             />
           ))}
@@ -242,11 +250,9 @@ export default function WaitingScreen({
             <div
               key={i}
               className={`w-3 h-3 rounded-full transition-colors ${
-                i < nextSlotIndex
+                lockedSlots.some((s) => s.key === SLOT_KEYS[i])
                   ? "bg-green-500"
-                  : spinningSlot === i
-                    ? "bg-yellow-500 animate-pulse"
-                    : "bg-gray-300"
+                  : "bg-gray-300"
               }`}
             />
           ))}
@@ -254,7 +260,7 @@ export default function WaitingScreen({
       </div>
 
       {/* CPU のみ: 全員揃い・全スロット確定後にボタン表示 */}
-      {mode === "cpu" && allJoined && allSlotsLocked && !decided && spinningSlot === null && (
+      {mode === "cpu" && allJoined && allSlotsLocked && !decided && (
         <button
           onClick={handleDecide}
           className="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-xl text-lg transition-all active:scale-95"
