@@ -9,6 +9,7 @@ import {
 } from "./gameService";
 import { WEBSOCKET_ORIGIN } from "./websocket";
 import { backendCardToFrontendCard, BackendCard } from "../lib/cardMapping";
+import { BabanukiPlayer } from "../lib/types";
 
 const SEAT_AVATARS = [
   "/avatars/user.png",
@@ -30,6 +31,7 @@ export class OnlineGameService implements GameService {
   private playerName = "";
 
   private waitingCb?: (waitingCount: number) => void;
+  private waitingPlayersCb?: (players: BabanukiPlayer[]) => void;
   private waitingSlotCb?: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void;
   private gameStartCb?: (data: GameStartData) => void;
   private gameStateCb?: (data: GameStateData) => void;
@@ -40,7 +42,7 @@ export class OnlineGameService implements GameService {
   private errorCb?: (message: string) => void;
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
-  onWaitingPlayers(): void { /* オンラインは待機中プレイヤー情報なし */ }
+  onWaitingPlayers(cb: (players: BabanukiPlayer[]) => void): void { this.waitingPlayersCb = cb; }
   onWaitingSlot(cb: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void): void { this.waitingSlotCb = cb; }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
@@ -105,6 +107,21 @@ export class OnlineGameService implements GameService {
     switch (msg.type) {
       case "waiting": {
         this.waitingCb?.(msg.waitingCount as number);
+
+        // playerNames から簡易的な BabanukiPlayer 配列を作成
+        const playerNames = msg.playerNames as string[] | undefined;
+        if (playerNames && playerNames.length > 0) {
+          const players: BabanukiPlayer[] = playerNames.map((name, i) => ({
+            id: `player-${i}`,
+            name,
+            avatar: SEAT_AVATARS[i] ?? "/avatars/user.png",
+            isCPU: false,
+            hand: [],
+            finishedOrder: null,
+          }));
+          this.waitingPlayersCb?.(players);
+        }
+
         const newSlot = msg.newSlot as RouletteSlotData | null;
         if (newSlot) {
           const allSlots = msg.decidedSlots as RouletteSlotData[];

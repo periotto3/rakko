@@ -102,13 +102,14 @@ function SlotReel({
 export default function WaitingScreen({
   mode,
   gameService,
-  players,
+  players: initialPlayers,
   maxPlayers,
   onThemeDecided,
   isGenerating = false,
   imageGenError = null,
 }: WaitingScreenProps) {
   const [waitingCount, setWaitingCount] = useState(1);
+  const [players, setPlayers] = useState<BabanukiPlayer[]>(initialPlayers);
   // 確定済みスロット一覧（decidedSlots ベースで管理）
   const [lockedSlots, setLockedSlots] = useState<RouletteSlotData[]>([]);
   const [theme, setTheme] = useState<ThemeSlot>({
@@ -125,6 +126,19 @@ export default function WaitingScreen({
     if (mode !== "online") return;
     gameService.onWaiting((count) => setWaitingCount(count));
   }, [mode, gameService]);
+
+  // オンラインモード：プレイヤー情報を購読
+  useEffect(() => {
+    if (mode !== "online") return;
+    gameService.onWaitingPlayers((onlinePlayers) => setPlayers(onlinePlayers));
+  }, [mode, gameService]);
+
+  // CPU モード：initialPlayers が変更されたら更新
+  useEffect(() => {
+    if (mode === "cpu") {
+      setPlayers(initialPlayers);
+    }
+  }, [mode, initialPlayers]);
 
   // CPU/Online 共通：スロット確定イベントを購読
   useEffect(() => {
@@ -199,34 +213,21 @@ export default function WaitingScreen({
 
       {/* アバター表示 */}
       <div className="flex gap-3 mb-8">
-        {mode === "cpu" ? (
-          <>
-            {players.map((p) => (
-              <div key={p.id} className="flex flex-col items-center">
-                <PlayerAvatar src={p.avatar} name={p.name} size={36} />
-                <span className="text-xs text-gray-600 mt-1">{p.name}</span>
-              </div>
-            ))}
-            {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
-              <div key={`empty-${i}`} className="flex flex-col items-center opacity-30">
-                <span className="text-3xl">❓</span>
-                <span className="text-xs text-gray-400 mt-1">待機中</span>
-              </div>
-            ))}
-          </>
-        ) : (
-          Array.from({ length: maxPlayers }).map((_, i) => (
-            <div
-              key={i}
-              className={`flex flex-col items-center transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}
-            >
-              <PlayerAvatar src={ONLINE_AVATARS[i]} name={`プレイヤー${i + 1}`} size={36} />
-              <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
-                {i < waitingCount ? "参加済" : "待機中"}
-              </span>
-            </div>
-          ))
-        )}
+        {/* 参加済みプレイヤー */}
+        {players.map((p) => (
+          <div key={p.id} className="flex flex-col items-center">
+            <PlayerAvatar src={p.avatar} name={p.name} size={36} />
+            <span className="text-xs text-gray-600 mt-1">{p.name}</span>
+          </div>
+        ))}
+
+        {/* 空席プレースホルダー */}
+        {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
+          <div key={`empty-${i}`} className="flex flex-col items-center opacity-30">
+            <span className="text-3xl">❓</span>
+            <span className="text-xs text-gray-400 mt-1">待機中</span>
+          </div>
+        ))}
       </div>
 
       <h2 className="text-2xl font-bold mb-4">テーマルーレット</h2>
