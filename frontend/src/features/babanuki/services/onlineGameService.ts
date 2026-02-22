@@ -4,9 +4,21 @@ import {
   GameStateData,
   CardDrawnData,
   RankingData,
+  PublicPlayerData,
 } from "./gameService";
 import { WEBSOCKET_ORIGIN } from "./websocket";
 import { backendCardToFrontendCard, BackendCard } from "../lib/cardMapping";
+
+const SEAT_AVATARS = [
+  "/avatars/user.png",
+  "/avatars/cpu_1.png",
+  "/avatars/cpu_2.png",
+  "/avatars/cpu_3.png",
+];
+
+function assignAvatars<T extends { seatIndex: number }>(players: T[]): (T & { avatar: string })[] {
+  return players.map((p) => ({ ...p, avatar: SEAT_AVATARS[p.seatIndex] ?? "/avatars/user.png" }));
+}
 
 /**
  * オンラインモードの GameService 実装。
@@ -24,6 +36,7 @@ export class OnlineGameService implements GameService {
   private errorCb?: (message: string) => void;
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
+  onWaitingPlayers(): void { /* オンラインは待機中プレイヤー情報なし */ }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
@@ -61,6 +74,9 @@ export class OnlineGameService implements GameService {
     this.send({ action: "draw_card", cardIndex });
   }
 
+  // サーバー主導でゲームが開始されるため、クライアント側では何もしない
+  startGame(): void {}
+
   dispose(): void {
     if (this.ws) {
       this.ws.onopen = null;
@@ -89,7 +105,7 @@ export class OnlineGameService implements GameService {
         this.gameStartCb?.({
           yourSeatIndex: msg.yourSeatIndex as number,
           yourHand,
-          players: msg.players as GameStartData["players"],
+          players: assignAvatars(msg.players as PublicPlayerData[]),
           currentTurnSeat: msg.currentTurnSeat as number,
         });
         break;
@@ -99,7 +115,7 @@ export class OnlineGameService implements GameService {
         const yourHand = (msg.yourHand as BackendCard[]).map(backendCardToFrontendCard);
         this.gameStateCb?.({
           yourHand,
-          players: msg.players as GameStateData["players"],
+          players: assignAvatars(msg.players as PublicPlayerData[]),
           currentTurnSeat: msg.currentTurnSeat as number,
         });
         break;
@@ -114,7 +130,7 @@ export class OnlineGameService implements GameService {
         break;
 
       case "game_over":
-        this.gameOverCb?.(msg.rankings as RankingData[]);
+        this.gameOverCb?.(assignAvatars(msg.rankings as RankingData[]));
         break;
 
       case "error":

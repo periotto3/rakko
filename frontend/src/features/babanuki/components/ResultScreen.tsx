@@ -46,7 +46,7 @@ export default function ResultScreen({
                   }`}
                 >
                   <span className="text-2xl">{isLoser ? "💀" : medals[r.rank - 1] ?? `${r.rank}位`}</span>
-                  <span className="text-2xl">{r.avatar}</span>
+                  <PlayerAvatar src={r.avatar} name={r.name} size={32} />
                   <span className="font-bold flex-1 text-left">{r.name}</span>
                   <span className="text-sm text-gray-500">
                     {isLoser ? "ジョーカー保持" : `${r.rank}位上がり`}

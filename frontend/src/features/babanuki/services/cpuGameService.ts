@@ -17,12 +17,11 @@ import {
 } from "./gameService";
 
 const CPU_PLAYERS = [
-  { id: "cpu1", name: "Aさん", avatar: "🐱" },
-  { id: "cpu2", name: "Bさん", avatar: "🐶" },
-  { id: "cpu3", name: "Cさん", avatar: "🐰" },
+  { id: "cpu1", name: "Aさん", avatar: "/avatars/cpu_1.png" },
+  { id: "cpu2", name: "Bさん", avatar: "/avatars/cpu_2.png" },
+  { id: "cpu3", name: "Cさん", avatar: "/avatars/cpu_3.png" },
 ];
 
-// 各プレイヤーが「参加」するまでの遅延（ms）
 const JOIN_DELAYS = [500, 3000, 5500, 8000];
 
 /**
@@ -31,6 +30,7 @@ const JOIN_DELAYS = [500, 3000, 5500, 8000];
  */
 export class CpuGameService implements GameService {
   private players: BabanukiPlayer[] = [];
+  private pendingPlayers: BabanukiPlayer[] | undefined;
   private currentTurnIndex = 0;
   private targetIndex = 0;
   private finishedCount = 0;
@@ -39,6 +39,7 @@ export class CpuGameService implements GameService {
   private isRunning = false;
 
   private waitingCb?: (waitingCount: number) => void;
+  private waitingPlayersCb?: (players: BabanukiPlayer[]) => void;
   private gameStartCb?: (data: GameStartData) => void;
   private gameStateCb?: (data: GameStateData) => void;
   private cardDrawnCb?: (data: CardDrawnData) => void;
@@ -46,6 +47,7 @@ export class CpuGameService implements GameService {
   private errorCb?: (message: string) => void;
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
+  onWaitingPlayers(cb: (players: BabanukiPlayer[]) => void): void { this.waitingPlayersCb = cb; }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
@@ -54,38 +56,39 @@ export class CpuGameService implements GameService {
 
   join(playerName: string): void {
     const allPlayers: BabanukiPlayer[] = [
-      { id: "human", name: playerName, avatar: "😊", isCPU: false, hand: [], finishedOrder: null },
+      { id: "human", name: playerName, avatar: "/avatars/user.png", isCPU: false, hand: [], finishedOrder: null },
       ...CPU_PLAYERS.map((c) => ({ ...c, isCPU: true, hand: [], finishedOrder: null })),
     ];
+    this.pendingPlayers = allPlayers;
 
-    // プレイヤーが1人ずつ参加する演出をシミュレート
     allPlayers.forEach((_, i) => {
       const timer = setTimeout(() => {
-        if (i < allPlayers.length - 1) {
-          // まだ全員揃っていない → waiting
-          this.waitingCb?.(i + 1);
-        } else {
-          // 4人目が参加 → ゲーム開始
-          this.players = dealCards(allPlayers);
-          this.currentTurnIndex = 0;
-          this.targetIndex = getDrawTarget(this.players, 0);
-          this.finishedCount = 0;
-          this.isRunning = true;
-
-          this.gameStartCb?.({
-            yourSeatIndex: this.mySeatIndex,
-            yourHand: [...this.players[this.mySeatIndex].hand],
-            players: this.buildPublicPlayers(),
-            currentTurnSeat: this.currentTurnIndex,
-          });
-
-          if (this.players[this.currentTurnIndex].isCPU) {
-            this.scheduleCpuTurn();
-          }
-        }
+        this.waitingCb?.(i + 1);
+        this.waitingPlayersCb?.(allPlayers.slice(0, i + 1));
       }, JOIN_DELAYS[i]);
       this.timers.push(timer);
     });
+  }
+
+  startGame(): void {
+    if (!this.pendingPlayers) return;
+    this.players = dealCards(this.pendingPlayers);
+    this.pendingPlayers = undefined;
+    this.currentTurnIndex = 0;
+    this.targetIndex = getDrawTarget(this.players, 0);
+    this.finishedCount = 0;
+    this.isRunning = true;
+
+    this.gameStartCb?.({
+      yourSeatIndex: this.mySeatIndex,
+      yourHand: [...this.players[this.mySeatIndex].hand],
+      players: this.buildPublicPlayers(),
+      currentTurnSeat: this.currentTurnIndex,
+    });
+
+    if (this.players[this.currentTurnIndex].isCPU) {
+      this.scheduleCpuTurn();
+    }
   }
 
   drawCard(cardIndex: number): void {
@@ -122,13 +125,19 @@ export class CpuGameService implements GameService {
 
     const afterDraw = () => {
       if (isGameOver(this.players)) {
-        // 残ったプレイヤーに最下位を付与してゲーム終了
-        this.players = this.players.map((p) => {
-          if (p.hand.length > 0 && p.finishedOrder === null) {
-            return { ...p, finishedOrder: this.finishedCount + 1 };
-          }
-          return p;
+        // 残プレイヤーにランク付与: 手札少ない順、Joker持ちは最後
+        const remaining = this.players.filter(p => p.hand.length > 0 && p.finishedOrder === null);
+        remaining.sort((a, b) => {
+          const aJoker = a.hand.some(c => c.suit === "joker");
+          const bJoker = b.hand.some(c => c.suit === "joker");
+          if (aJoker !== bJoker) return aJoker ? 1 : -1;
+          return a.hand.length - b.hand.length;
         });
+        let nextRank = this.finishedCount + 1;
+        const rankMap = new Map(remaining.map(p => [p.id, nextRank++]));
+        this.players = this.players.map(p =>
+          rankMap.has(p.id) ? { ...p, finishedOrder: rankMap.get(p.id)! } : p
+        );
         this.isRunning = false;
         this.gameOverCb?.(this.buildRankings());
         return;
