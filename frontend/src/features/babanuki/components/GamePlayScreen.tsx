@@ -183,8 +183,12 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
   const [errorLog, setErrorLog] = useState<{ id: number; msg: string }[]>([]);
   const [clickedCardIndex, setClickedCardIndex] = useState<number | null>(null);
+  const [drawnCardPreview, setDrawnCardPreview] = useState<Card | null>(null);
+  const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
   const errorIdRef = useRef(0);
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevHandRef = useRef<Card[]>(gameStartData.yourHand);
+  const lastPairedRef = useRef<boolean>(false);
 
   useEffect(() => {
     return () => {
@@ -194,7 +198,35 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
 
   useEffect(() => {
     gameService.onGameState((data) => {
-      setYourHand(data.yourHand);
+      const newHand = data.yourHand;
+
+      // Detect newly drawn card (if I just finished my turn)
+      if (data.currentTurnSeat !== mySeatIndex) {
+        const addedCards = newHand.filter(
+          card => !prevHandRef.current.some(c => c.id === card.id)
+        );
+
+        if (addedCards.length > 0) {
+          const drawnCard = addedCards[0];
+          setDrawnCardPreview(drawnCard);
+
+          // Check if this card forms a pair with existing cards
+          if (lastPairedRef.current) {
+            // A pair was formed - highlight the matching rank
+            setHighlightedRank(drawnCard.rank);
+          }
+
+          // Clear preview and highlight after animation
+          setTimeout(() => {
+            setDrawnCardPreview(null);
+            setHighlightedRank(null);
+            lastPairedRef.current = false;
+          }, 1200);
+        }
+      }
+
+      prevHandRef.current = newHand;
+      setYourHand(newHand);
       setPlayers(data.players);
       setCurrentTurnSeat(data.currentTurnSeat);
       setClickedCardIndex(null); // Reset animation on state update
@@ -207,6 +239,11 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
     });
 
     gameService.onCardDrawn((data: CardDrawnData) => {
+      // Track if I formed a pair (for highlighting)
+      if (data.drawerSeat === mySeatIndex && data.paired) {
+        lastPairedRef.current = true;
+      }
+
       setPlayers((prev) => {
         const drawer = prev.find(p => p.seatIndex === data.drawerSeat);
         setLastDrawnInfo(
@@ -272,7 +309,13 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
           50%  { transform: scale(1.3) translateY(-18px); opacity: 0.8; }
           100% { transform: scale(0.7) translateY(-36px); opacity: 0; }
         }
+        @keyframes card-arrive {
+          0%   { transform: translateY(-60px) scale(0.6); opacity: 0; }
+          65%  { transform: translateY(6px) scale(1.1);  opacity: 1; }
+          100% { transform: translateY(0) scale(1);      opacity: 1; }
+        }
         .animate-card-lift { animation: card-lift 0.55s ease-in forwards; }
+        .animate-card-arrive { animation: card-arrive 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
       `}</style>
       <div className="h-screen flex flex-col relative overflow-hidden select-none">
         {/* Background */}
@@ -395,10 +438,27 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
             <div className="text-white text-sm font-bold">{myPlayer?.name ?? "あなた"}</div>
           </div>
           {yourHand.length > 0 ? (
-            <div className="flex gap-1 flex-nowrap justify-center max-w-[90vw] overflow-x-auto">
-              {yourHand.map((card) => (
-                <CardFace key={card.id} card={card} large />
-              ))}
+            <div className="flex gap-2 items-center flex-nowrap justify-center max-w-[90vw] overflow-x-auto">
+              <div className="flex gap-1">
+                {yourHand.map((card) => (
+                  <CardFace
+                    key={card.id}
+                    card={card}
+                    large
+                    highlighted={highlightedRank !== null && card.rank === highlightedRank}
+                  />
+                ))}
+              </div>
+              {drawnCardPreview && (
+                <div key={drawnCardPreview.id} className="flex flex-col items-center gap-0.5 shrink-0 animate-card-arrive">
+                  <span className="text-[9px] text-yellow-300 font-bold">引いた！</span>
+                  <CardFace
+                    card={drawnCardPreview}
+                    large
+                    highlighted={highlightedRank !== null}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center text-green-400 font-bold text-lg py-4">
