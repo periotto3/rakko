@@ -36,5 +36,5 @@ export type ServerMessage =
     }
   | { type: "game_over"; rankings: Ranking[] }
   | { type: "generating" }
-  | { type: "images_ready"; imageUrls: string[] }
+  | { type: "images_ready"; backgroundImage: string }
   | { type: "error"; message: string };

@@ -144,7 +144,7 @@ export class JoinGameUseCase {
         matchedPlayers.map((w) =>
           this.notificationService.sendToConnection(w.connectionId, {
             type: "images_ready",
-            imageUrls,
+            backgroundImage: imageUrls[0],
           })
         )
       );
