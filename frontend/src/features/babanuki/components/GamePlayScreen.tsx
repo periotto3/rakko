@@ -73,21 +73,23 @@ function CardFace({ card, highlighted, large }: { card: Card; highlighted?: bool
 }
 
 function CardBack({
-  onClick, highlighted, large, compact,
+  onClick, highlighted, large, compact, isClicked,
 }: {
   onClick?: () => void;
   highlighted?: boolean;
   large?: boolean;
   compact?: boolean;
+  isClicked?: boolean;
 }) {
   const sizeClass = large ? "w-[78px] h-[111px]" : compact ? "w-[38px] h-[54px]" : "w-[52px] h-[74px]";
   const innerClass = large ? "w-[58px] h-[90px]" : compact ? "w-[28px] h-[42px]" : "w-[38px] h-[58px]";
   return (
     <button
       onClick={onClick}
-      disabled={!onClick}
-      className={`${sizeClass} rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0 transition-transform duration-150
-        ${onClick ? "cursor-pointer hover:scale-110 hover:-translate-y-1" : "cursor-default"}
+      disabled={!onClick || isClicked}
+      className={`${sizeClass} rounded-lg shadow-lg border-2 flex items-center justify-center select-none shrink-0
+        ${isClicked ? "animate-card-lift pointer-events-none" : "transition-transform duration-150"}
+        ${onClick && !isClicked ? "cursor-pointer hover:scale-110 hover:-translate-y-1" : "cursor-default"}
         ${highlighted ? "border-yellow-400 ring-2 ring-yellow-300" : "border-blue-900"}`}
       style={{ background: highlighted ? "linear-gradient(135deg, #1e40af, #3b82f6)" : "linear-gradient(135deg, #1e3a5f, #1e40af)" }}
     >
@@ -101,12 +103,13 @@ function CardBack({
 /* ─── Opponent Panel ─── */
 
 function OpponentPanel({
-  player, isCurrentTurn, isTarget, onCardClick,
+  player, isCurrentTurn, isTarget, onCardClick, clickedCardIndex,
 }: {
   player: PublicPlayerData;
   isCurrentTurn: boolean;
   isTarget: boolean;
   onCardClick?: (index: number) => void;
+  clickedCardIndex?: number | null;
 }) {
   const finished = player.cardCount === 0;
   return (
@@ -135,10 +138,11 @@ function OpponentPanel({
           {Array.from({ length: player.cardCount }).map((_, idx) => (
             <CardBack
               key={idx}
-              onClick={isTarget && onCardClick ? () => onCardClick(idx) : undefined}
+              onClick={isTarget && onCardClick && clickedCardIndex == null ? () => onCardClick(idx) : undefined}
               highlighted={isTarget}
               large={isTarget}
               compact={!isTarget}
+              isClicked={isTarget && clickedCardIndex === idx}
             />
           ))}
         </div>
@@ -178,13 +182,22 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
   );
   const [lastDrawnInfo, setLastDrawnInfo] = useState<string | null>(null);
   const [errorLog, setErrorLog] = useState<{ id: number; msg: string }[]>([]);
+  const [clickedCardIndex, setClickedCardIndex] = useState<number | null>(null);
   const errorIdRef = useRef(0);
+  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     gameService.onGameState((data) => {
       setYourHand(data.yourHand);
       setPlayers(data.players);
       setCurrentTurnSeat(data.currentTurnSeat);
+      setClickedCardIndex(null); // Reset animation on state update
       const turnPlayer = data.players.find(p => p.seatIndex === data.currentTurnSeat);
       setMessage(
         data.currentTurnSeat === mySeatIndex
@@ -236,7 +249,11 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
 
   const handleCardClick = (cardIndex: number) => {
     if (!isMyTurn) return;
-    gameService.drawCard(cardIndex);
+    setClickedCardIndex(cardIndex);
+    // Wait for animation to complete before sending the action
+    animationTimeoutRef.current = setTimeout(() => {
+      gameService.drawCard(cardIndex);
+    }, 550); // Match card-lift animation duration
   };
 
   // seat layout relative to mySeat: right=(+1), top=(+2), left=(+3)
@@ -248,8 +265,17 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
   const myPlayer = getPlayer(mySeatIndex);
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden select-none">
-      {/* Background */}
+    <>
+      <style>{`
+        @keyframes card-lift {
+          0%   { transform: scale(1) translateY(0);    opacity: 1; }
+          50%  { transform: scale(1.3) translateY(-18px); opacity: 0.8; }
+          100% { transform: scale(0.7) translateY(-36px); opacity: 0; }
+        }
+        .animate-card-lift { animation: card-lift 0.55s ease-in forwards; }
+      `}</style>
+      <div className="h-screen flex flex-col relative overflow-hidden select-none">
+        {/* Background */}
       <div
         className="absolute inset-0"
         style={
@@ -291,6 +317,7 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
               isCurrentTurn={currentTurnSeat === topSeat}
               isTarget={targetSeat === topSeat}
               onCardClick={targetSeat === topSeat ? handleCardClick : undefined}
+              clickedCardIndex={targetSeat === topSeat ? clickedCardIndex : null}
             />
           </div>
         )}
@@ -303,6 +330,7 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
               isCurrentTurn={currentTurnSeat === leftSeat}
               isTarget={targetSeat === leftSeat}
               onCardClick={targetSeat === leftSeat ? handleCardClick : undefined}
+              clickedCardIndex={targetSeat === leftSeat ? clickedCardIndex : null}
             />
           </div>
         )}
@@ -315,6 +343,7 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
               isCurrentTurn={currentTurnSeat === rightSeat}
               isTarget={targetSeat === rightSeat}
               onCardClick={targetSeat === rightSeat ? handleCardClick : undefined}
+              clickedCardIndex={targetSeat === rightSeat ? clickedCardIndex : null}
             />
           </div>
         )}
@@ -379,5 +408,6 @@ export default function GamePlayScreen({ gameService, gameStartData, backgroundI
         </div>
       </div>
     </div>
+    </>
   );
 }
