@@ -9,8 +9,8 @@ import {
   THEME_WHERE,
   THEME_STYLE,
 } from "../lib/engine";
-import type { GameMode } from "./TitleScreen";
-import type { GameService, GameStartData } from "../services/gameService";
+import type { GameMode } from "../lib/types";
+import type { GameService } from "../services/gameService";
 
 interface WaitingScreenProps {
   mode: GameMode;
@@ -19,8 +19,6 @@ interface WaitingScreenProps {
   // CPU モード専用
   players: BabanukiPlayer[];
   onThemeDecided: (theme: ThemeSlot) => void;
-  // オンラインモード専用
-  onGameStart: (data: GameStartData) => void;
 }
 
 const SLOT_KEYS: (keyof ThemeSlot)[] = ["work", "when", "where", "style"];
@@ -97,17 +95,15 @@ export default function WaitingScreen({
   players,
   maxPlayers,
   onThemeDecided,
-  onGameStart,
 }: WaitingScreenProps) {
   // オンラインモード用：待機人数
   const [waitingCount, setWaitingCount] = useState(1);
 
-  // オンラインモード：gameService のコールバックを登録
+  // オンラインモード：onWaiting のみ購読（onGameStart は page.tsx で管理）
   useEffect(() => {
     if (mode !== "online") return;
     gameService.onWaiting((count) => setWaitingCount(count));
-    gameService.onGameStart((data) => onGameStart(data));
-  }, [mode, gameService, onGameStart]);
+  }, [mode, gameService]);
   const [nextSlotIndex, setNextSlotIndex] = useState(0);
   const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeSlot>({
@@ -147,7 +143,7 @@ export default function WaitingScreen({
 
   // オンラインモード：シンプルな待機画面
   if (mode === "online") {
-    const AVATARS = ["😊", "🐱", "🐶", "🐰"];
+    const AVATARS = ["/avatars/user.png", "/avatars/cpu_1.png", "/avatars/cpu_2.png", "/avatars/cpu_3.png"];
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
         <h1 className="text-3xl font-bold mb-2">
@@ -157,10 +153,8 @@ export default function WaitingScreen({
 
         <div className="flex gap-4 mb-10">
           {Array.from({ length: maxPlayers }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <span className={`text-4xl transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}>
-                {AVATARS[i]}
-              </span>
+            <div key={i} className={`flex flex-col items-center transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}>
+              <PlayerAvatar src={AVATARS[i]} name={`プレイヤー${i + 1}`} size={40} />
               <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
                 {i < waitingCount ? "参加済" : "待機中"}
               </span>
