@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { BabanukiPlayer, ThemeSlot } from "../lib/types";
 import PlayerAvatar from "./PlayerAvatar";
 import {
-  THEME_WORK,
+  THEME_WHO,
   THEME_WHEN,
   THEME_WHERE,
-  THEME_STYLE,
+  THEME_WHAT,
 } from "../lib/engine";
 import type { GameMode } from "../lib/types";
-import type { GameService } from "../services/gameService";
+import type { GameService, RouletteSlotData } from "../services/gameService";
 
 interface WaitingScreenProps {
   mode: GameMode;
@@ -24,19 +24,26 @@ interface WaitingScreenProps {
   imageGenError?: string | null;
 }
 
-const SLOT_KEYS: (keyof ThemeSlot)[] = ["work", "when", "where", "style"];
+const SLOT_KEYS: (keyof ThemeSlot)[] = ["who", "when", "where", "what"];
 const SLOT_ITEMS: Record<keyof ThemeSlot, string[]> = {
-  work: THEME_WORK,
+  who: THEME_WHO,
   when: THEME_WHEN,
   where: THEME_WHERE,
-  style: THEME_STYLE,
+  what: THEME_WHAT,
 };
 const SLOT_LABELS: Record<keyof ThemeSlot, string> = {
-  work: "作品",
+  who: "だれが",
   when: "いつ",
   where: "どこで",
-  style: "画風",
+  what: "なにを",
 };
+
+const ONLINE_AVATARS = [
+  "/avatars/user.png",
+  "/avatars/cpu_1.png",
+  "/avatars/cpu_2.png",
+  "/avatars/cpu_3.png",
+];
 
 function SlotReel({
   items,
@@ -101,142 +108,125 @@ export default function WaitingScreen({
   isGenerating = false,
   imageGenError = null,
 }: WaitingScreenProps) {
-  // オンラインモード用：待機人数
   const [waitingCount, setWaitingCount] = useState(1);
+  // 確定済みスロット一覧（decidedSlots ベースで管理）
+  const [lockedSlots, setLockedSlots] = useState<RouletteSlotData[]>([]);
+  const [theme, setTheme] = useState<ThemeSlot>({
+    who: THEME_WHO[0],
+    when: THEME_WHEN[0],
+    where: THEME_WHERE[0],
+    what: THEME_WHAT[0],
+  });
+  const [decided, setDecided] = useState(false);
+  const pendingSlotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // オンラインモード：onWaiting のみ購読（onGameStart は page.tsx で管理）
+  // オンラインモード：待機人数を購読
   useEffect(() => {
     if (mode !== "online") return;
     gameService.onWaiting((count) => setWaitingCount(count));
   }, [mode, gameService]);
-  const [nextSlotIndex, setNextSlotIndex] = useState(0);
-  const [spinningSlot, setSpinningSlot] = useState<number | null>(null);
-  const [theme, setTheme] = useState<ThemeSlot>({
-    work: THEME_WORK[0],
-    when: THEME_WHEN[0],
-    where: THEME_WHERE[0],
-    style: THEME_STYLE[0],
-  });
-  const [decided, setDecided] = useState(false);
 
-  const prevPlayerCount = useRef(0);
+  // CPU/Online 共通：スロット確定イベントを購読
   useEffect(() => {
-    if (players.length > prevPlayerCount.current && nextSlotIndex < SLOT_KEYS.length && !decided) {
-      const slotIdx = nextSlotIndex;
-      setSpinningSlot(slotIdx);
-
-      const key = SLOT_KEYS[slotIdx];
-      const items = SLOT_ITEMS[key];
-      const pick = items[Math.floor(Math.random() * items.length)];
-
-      setTimeout(() => {
-        setTheme((prev) => ({ ...prev, [key]: pick }));
-        setSpinningSlot(null);
-        setNextSlotIndex(slotIdx + 1);
+    gameService.onWaitingSlot((slot, allSlots) => {
+      // 古いタイマーをキャンセルして状態の巻き戻しを防止
+      if (pendingSlotTimerRef.current) clearTimeout(pendingSlotTimerRef.current);
+      // 確定済み値を theme に反映
+      setTheme((prev) => {
+        const next = { ...prev };
+        allSlots.forEach((s) => { (next as Record<string, string>)[s.key] = s.value; });
+        return next;
+      });
+      // 新スロット以外は即座にロック（再参加などで複数スロット確定済みの場合に対応）
+      setLockedSlots(allSlots.filter((s) => s.slotIndex !== slot.slotIndex));
+      // 新スロットは 1500ms アニメーション後にロック
+      pendingSlotTimerRef.current = setTimeout(() => {
+        setLockedSlots(allSlots);
+        pendingSlotTimerRef.current = null;
       }, 1500);
-    }
-    prevPlayerCount.current = players.length;
-  }, [players.length, nextSlotIndex, decided]);
+    });
+  }, [gameService]);
 
   const handleDecide = () => {
     setDecided(true);
     onThemeDecided(theme);
   };
 
-  const allJoined = players.length >= maxPlayers;
-  const allSlotsLocked = nextSlotIndex >= SLOT_KEYS.length;
+  const displayCount = mode === "cpu" ? players.length : waitingCount;
+  const allJoined = displayCount >= maxPlayers;
+  const allSlotsLocked = lockedSlots.length >= SLOT_KEYS.length;
 
-  // オンラインモード：シンプルな待機画面
-  if (mode === "online") {
-    const AVATARS = ["/avatars/user.png", "/avatars/cpu_1.png", "/avatars/cpu_2.png", "/avatars/cpu_3.png"];
 
-    // 画像生成エラー
-    if (imageGenError) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-red-600 mb-2">エラーが発生しました</h1>
-          <p className="text-gray-500 mb-8">{imageGenError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-xl text-sm transition-all"
-          >
-            もう一度試す
-          </button>
-        </div>
-      );
-    }
-
-    // 画像生成中
-    if (isGenerating) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
-          <div className="w-14 h-14 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-6" />
-          <h1 className="text-2xl font-bold mb-2">背景画像を生成中...</h1>
-          <p className="text-gray-400 text-sm">AIがゲーム用の画像を作成しています</p>
-        </div>
-      );
-    }
-
-    // マッチング待機中
+  // オンライン：画像生成エラー
+  if (mode === "online" && imageGenError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
-        <h1 className="text-3xl font-bold mb-2">
-          {waitingCount >= maxPlayers ? "全員そろいました！" : `マッチング中...`}
-        </h1>
-        <p className="text-gray-500 mb-8">{waitingCount}/{maxPlayers}人が待機中</p>
-
-        <div className="flex gap-4 mb-10">
-          {Array.from({ length: maxPlayers }).map((_, i) => (
-            <div key={i} className={`flex flex-col items-center transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}>
-              <PlayerAvatar src={AVATARS[i]} name={`プレイヤー${i + 1}`} size={40} />
-              <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
-                {i < waitingCount ? "参加済" : "待機中"}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex gap-2 mb-8">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="w-3 h-3 rounded-full bg-blue-500 animate-bounce"
-              style={{ animationDelay: `${i * 0.2}s` }}
-            />
-          ))}
-        </div>
-
+        <div className="text-5xl mb-4">⚠️</div>
+        <h1 className="text-2xl font-bold text-red-600 mb-2">エラーが発生しました</h1>
+        <p className="text-gray-500 mb-8">{imageGenError}</p>
         <button
           onClick={() => window.location.reload()}
-          className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-xl text-sm transition-all"
+          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-xl text-sm transition-all"
         >
-          キャンセル
+          もう一度試す
         </button>
       </div>
     );
   }
 
-  // CPUモード：既存のテーマルーレットUI
+  // オンライン：画像生成中
+  if (mode === "online" && isGenerating) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+        <div className="w-14 h-14 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-6" />
+        <h1 className="text-2xl font-bold mb-2">背景画像を生成中...</h1>
+        <p className="text-gray-400 text-sm">AIがゲーム用の画像を作成しています</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
       <h1 className="text-3xl font-bold mb-2">
-        {allJoined ? "全員そろいました！" : `${players.length}/${maxPlayers}人を待っています...`}
+        {allJoined
+          ? "全員そろいました！"
+          : mode === "online"
+            ? "マッチング中..."
+            : `${displayCount}/${maxPlayers}人を待っています...`}
       </h1>
+      <p className="text-gray-500 mb-6">{displayCount}/{maxPlayers}人が待機中</p>
 
+
+      {/* アバター表示 */}
       <div className="flex gap-3 mb-8">
-        {players.map((p) => (
-          <div key={p.id} className="flex flex-col items-center">
-            <PlayerAvatar src={p.avatar} name={p.name} size={36} />
-            <span className="text-xs text-gray-600 mt-1">{p.name}</span>
-          </div>
-        ))}
-        {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
-          <div key={`empty-${i}`} className="flex flex-col items-center opacity-30">
-            <span className="text-3xl">❓</span>
-            <span className="text-xs text-gray-400 mt-1">待機中</span>
-          </div>
-        ))}
+        {mode === "cpu" ? (
+          <>
+            {players.map((p) => (
+              <div key={p.id} className="flex flex-col items-center">
+                <PlayerAvatar src={p.avatar} name={p.name} size={36} />
+                <span className="text-xs text-gray-600 mt-1">{p.name}</span>
+              </div>
+            ))}
+            {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
+              <div key={`empty-${i}`} className="flex flex-col items-center opacity-30">
+                <span className="text-3xl">❓</span>
+                <span className="text-xs text-gray-400 mt-1">待機中</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          Array.from({ length: maxPlayers }).map((_, i) => (
+            <div
+              key={i}
+              className={`flex flex-col items-center transition-opacity ${i < waitingCount ? "opacity-100" : "opacity-20"}`}
+            >
+              <PlayerAvatar src={ONLINE_AVATARS[i]} name={`プレイヤー${i + 1}`} size={36} />
+              <span className={`text-xs mt-1 ${i < waitingCount ? "text-gray-700" : "text-gray-300"}`}>
+                {i < waitingCount ? "参加済" : "待機中"}
+              </span>
+            </div>
+          ))
+        )}
       </div>
 
       <h2 className="text-2xl font-bold mb-4">テーマルーレット</h2>
@@ -247,9 +237,9 @@ export default function WaitingScreen({
             <SlotReel
               key={key}
               items={SLOT_ITEMS[key]}
-              spinning={spinningSlot === i}
+              spinning={!lockedSlots.some((s) => s.key === key)}
               finalValue={theme[key]}
-              locked={i < nextSlotIndex}
+              locked={lockedSlots.some((s) => s.key === key)}
               label={SLOT_LABELS[key]}
             />
           ))}
@@ -260,18 +250,17 @@ export default function WaitingScreen({
             <div
               key={i}
               className={`w-3 h-3 rounded-full transition-colors ${
-                i < nextSlotIndex
+                lockedSlots.some((s) => s.key === SLOT_KEYS[i])
                   ? "bg-green-500"
-                  : spinningSlot === i
-                    ? "bg-yellow-500 animate-pulse"
-                    : "bg-gray-300"
+                  : "bg-gray-300"
               }`}
             />
           ))}
         </div>
       </div>
 
-      {allJoined && allSlotsLocked && !decided && spinningSlot === null && (
+      {/* CPU のみ: 全員揃い・全スロット確定後にボタン表示 */}
+      {mode === "cpu" && allJoined && allSlotsLocked && !decided && (
         <button
           onClick={handleDecide}
           className="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-xl text-lg transition-all active:scale-95"
@@ -280,11 +269,20 @@ export default function WaitingScreen({
         </button>
       )}
 
+      {/* Online のみ: 全スロット確定後にメッセージ表示 */}
+      {mode === "online" && allSlotsLocked && (
+        <p className="mt-6 text-gray-500 animate-pulse">まもなくゲームが始まります...</p>
+      )}
+
       <button
         onClick={() => window.location.reload()}
-        className="mt-4 bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-bold py-2 px-6 rounded-xl text-sm transition-all"
+        className={`mt-4 font-bold py-2 px-6 rounded-xl text-sm transition-all ${
+          mode === "online"
+            ? "bg-gray-200 hover:bg-gray-300 text-gray-700"
+            : "bg-yellow-400 hover:bg-yellow-500 text-gray-800"
+        }`}
       >
-        ホームに戻る
+        {mode === "online" ? "キャンセル" : "ホームに戻る"}
       </button>
     </div>
   );

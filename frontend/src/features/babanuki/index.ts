@@ -9,7 +9,7 @@ export { default as ResultScreen } from "./components/ResultScreen";
 export type { BabanukiPlayer, ThemeSlot, GamePhase, GameMode } from "./lib/types";
 
 // Service interface & types
-export type { GameService, GameStartData, GameStateData, RankingData } from "./services/gameService";
+export type { GameService, GameStartData, GameStateData, RankingData, RouletteSlotData } from "./services/gameService";
 
 // Factory
 export { createGameService } from "./services/gameServiceFactory";

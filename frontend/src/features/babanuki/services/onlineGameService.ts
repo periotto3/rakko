@@ -5,6 +5,7 @@ import {
   CardDrawnData,
   RankingData,
   PublicPlayerData,
+  RouletteSlotData,
 } from "./gameService";
 import { WEBSOCKET_ORIGIN } from "./websocket";
 import { backendCardToFrontendCard, BackendCard } from "../lib/cardMapping";
@@ -29,6 +30,7 @@ export class OnlineGameService implements GameService {
   private playerName = "";
 
   private waitingCb?: (waitingCount: number) => void;
+  private waitingSlotCb?: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void;
   private gameStartCb?: (data: GameStartData) => void;
   private gameStateCb?: (data: GameStateData) => void;
   private cardDrawnCb?: (data: CardDrawnData) => void;
@@ -39,6 +41,7 @@ export class OnlineGameService implements GameService {
 
   onWaiting(cb: (waitingCount: number) => void): void { this.waitingCb = cb; }
   onWaitingPlayers(): void { /* オンラインは待機中プレイヤー情報なし */ }
+  onWaitingSlot(cb: (slot: RouletteSlotData, allSlots: RouletteSlotData[]) => void): void { this.waitingSlotCb = cb; }
   onGameStart(cb: (data: GameStartData) => void): void { this.gameStartCb = cb; }
   onGameState(cb: (data: GameStateData) => void): void { this.gameStateCb = cb; }
   onCardDrawn(cb: (data: CardDrawnData) => void): void { this.cardDrawnCb = cb; }
@@ -100,9 +103,15 @@ export class OnlineGameService implements GameService {
 
   private handleMessage(msg: Record<string, unknown>): void {
     switch (msg.type) {
-      case "waiting":
+      case "waiting": {
         this.waitingCb?.(msg.waitingCount as number);
+        const newSlot = msg.newSlot as RouletteSlotData | null;
+        if (newSlot) {
+          const allSlots = msg.decidedSlots as RouletteSlotData[];
+          this.waitingSlotCb?.(newSlot, allSlots);
+        }
         break;
+      }
 
       case "game_start": {
         const yourHand = (msg.yourHand as BackendCard[]).map(backendCardToFrontendCard);
